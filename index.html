@@ -121,10 +121,7 @@
       <input type="text" id="nn-new-text" placeholder="New non-negotiable">
       <input type="text" id="nn-new-meta" placeholder="Note / target">
       <input type="text" id="nn-new-tag" placeholder="Tag">
-      <div class="scope-picker hidden" id="nn-new-scope">
-        <label><input type="checkbox" value="hard" checked> Daily</label>
-      </div>
-      <div class="timer-log-line">Applies from this date forward</div>
+      <div></div><div></div>
       <button class="btn sm primary" onclick="addNonNeg(this)">Add</button>
     </div>
     <div id="nnList"></div>
@@ -137,10 +134,7 @@
       <input type="text" id="tr-new-text" placeholder="New training item">
       <input type="text" id="tr-new-meta" placeholder="Note / target">
       <input type="text" id="tr-new-tag" placeholder="Tag">
-      <div class="scope-picker hidden" id="tr-new-scope">
-        <label><input type="checkbox" value="hard" checked> Daily</label>
-      </div>
-      <div class="timer-log-line">Applies to every future workday</div>
+      <div></div><div></div>
       <button class="btn sm primary" onclick="addTrainingItem(this)">Add</button>
     </div>
     <div id="trainingList"></div>
@@ -148,7 +142,14 @@
 
   <!-- Exercise -->
   <div class="card">
-    <div class="card-title">Exercise <span class="section-line"></span><button class="reset-link" onclick="resetExercise()">Reset</button></div>
+    <div class="card-title" id="exerciseTitle">Exercise <span class="section-line"></span> <span class="count" id="exCount">0/0</span></div>
+    <div class="list-editor">
+      <input type="text" id="ex-new-text" placeholder="New exercise item">
+      <input type="text" id="ex-new-meta" placeholder="Duration / Note">
+      <input type="text" id="ex-new-tag" placeholder="Tag">
+      <div></div><div></div>
+      <button class="btn sm primary" onclick="addExercise(this)">Add</button>
+    </div>
     <div id="exerciseList"></div>
   </div>
 
