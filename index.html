@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Tracker</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101211'/%3E%3Cpath d='M18 22h28M32 22v24' stroke='%2355d6be' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='46' cy='46' r='6' fill='%2372d889'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<div class="app-header">
+  <div class="app-title-row">
+    <div style="display:flex; align-items:center; gap:8px">
+      <svg width="20" height="20" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="64" rx="16" fill="#202622"/>
+        <path d="M18 22h28M32 22v24" stroke="#55d6be" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="46" cy="46" r="6" fill="#72d889"/>
+      </svg>
+      <span class="app-title">The Tracker</span>
+    </div>
+    <span class="app-sub">daily operating system · v2</span>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('daily')">Daily</button>
+    <button class="tab-btn" onclick="switchTab('timer')">Timer</button>
+    <button class="tab-btn" onclick="switchTab('weekly')">Weekly Log</button>
+    <button class="tab-btn" onclick="switchTab('metrics')">Benchmarks</button>
+    <button class="tab-btn" onclick="switchTab('errorlog')">Error Log</button>
+    <button class="tab-btn" onclick="switchTab('export')">Data</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ TAB: DAILY ═══════════════════════ -->
+<div class="tab-panel active" id="tab-daily">
+
+  <!-- Week navigation -->
+  <div class="week-nav">
+    <div class="week-nav-controls">
+      <button class="btn sm week-arrow" title="Previous week" onclick="shiftSelectedWeek(-1)">←W</button>
+      <button class="btn sm week-arrow" title="Previous day" onclick="shiftSelectedDay(-1)">←D</button>
+    </div>
+    <div>
+      <div class="week-nav-title" id="weekNavTitle">Current week</div>
+      <div class="week-nav-sub" id="weekNavSub">Monday start</div>
+    </div>
+    <div class="week-nav-jump">
+      <button class="btn sm" onclick="goToToday()">Today</button>
+      <button class="btn sm week-arrow" title="Next day" onclick="shiftSelectedDay(1)">D→</button>
+      <button class="btn sm week-arrow" title="Next week" onclick="shiftSelectedWeek(1)">W→</button>
+      <label for="weekJumpDate">Jump</label>
+      <input type="date" id="weekJumpDate">
+      <button class="btn sm primary" onclick="jumpToWeek()">Go</button>
+    </div>
+  </div>
+
+  <!-- Week strip -->
+  <div class="week-strip" id="weekStrip"></div>
+
+  <!-- Quote banner -->
+  <div class="phase-banner">
+    <span class="phase-desc" id="phaseDesc"></span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="statStreak">0</div><div class="stat-label">Day Streak</div><div class="stat-sublabel">≥70% weekdays</div></div>
+    <div class="stat-card"><div class="stat-val" id="statWeek">0/7</div><div class="stat-label">Week Days</div></div>
+    <div class="stat-card primary"><div class="stat-val large" id="statToday">0%</div><div class="stat-label">Today Done</div></div>
+    <div class="stat-card primary"><div class="stat-val large" id="statHours">0h</div><div class="stat-label">Hours Today</div></div>
+    <div class="stat-card"><div class="stat-val" id="statWeekPace">—</div><div class="stat-label">3-Day Avg</div><div class="stat-sublabel">hrs / workday</div></div>
+  </div>
+
+  <div class="dashboard-card">
+    <div class="card-title">Dashboard Summary <span class="section-line"></span></div>
+    <div class="dashboard-grid" id="dashboardSummary"></div>
+  </div>
+
+  <!-- Day header -->
+  <div class="day-header">
+    <div>
+      <div class="day-title" id="dayTitle">Monday</div>
+      <div class="day-meta" id="dayMeta">loading…</div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="prog-wrap">
+    <div class="prog-info">
+      <span id="progressLabel">0 / 0 complete</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Daily numeric inputs -->
+  <div class="daily-inputs card">
+    <div class="card-title">Today's Numbers <span class="section-line"></span><button class="reset-link" onclick="toggleNumberLabelEditor()">Customize Labels</button></div>
+    <div class="today-number-grid" id="todayNumbersGrid"></div>
+    <div class="number-label-editor hidden" id="numberLabelEditor"></div>
+    <div class="fallback-hint" id="fallbackHint"></div>
+  </div>
+
+  <!-- Sunday Protocol -->
+  <div class="sunday-panel" id="sundayPanel" style="display:none">
+    <div class="sunday-title">☀ Sunday Protocol — Non-Negotiable (90 min)</div>
+    <div id="sundayList"></div>
+  </div>
+
+  <!-- Non-Negotiables -->
+  <div class="card">
+    <div class="card-title">
+      Non-Negotiables <span class="section-line"></span>
+      <button class="reset-link" onclick="resetNonNegs()">Reset</button>
+      <span class="count" id="nnCount">0/8</span>
+    </div>
+    <div class="list-editor">
+      <input type="text" id="nn-new-text" placeholder="New non-negotiable">
+      <input type="text" id="nn-new-meta" placeholder="Note / target">
+      <input type="text" id="nn-new-tag" placeholder="Tag">
+      <div class="scope-picker hidden" id="nn-new-scope">
+        <label><input type="checkbox" value="hard" checked> Daily</label>
+      </div>
+      <div class="timer-log-line">Applies from this date forward</div>
+      <button class="btn sm primary" onclick="addNonNeg(this)">Add</button>
+    </div>
+    <div id="nnList"></div>
+  </div>
+
+  <!-- Daily Tasks -->
+  <div class="card">
+    <div class="card-title" id="trainingTitle">Tasks for the Day <span class="section-line"></span> <span class="count" id="tbCount">0/6</span></div>
+    <div class="list-editor">
+      <input type="text" id="tr-new-text" placeholder="New training item">
+      <input type="text" id="tr-new-meta" placeholder="Note / target">
+      <input type="text" id="tr-new-tag" placeholder="Tag">
+      <div class="scope-picker hidden" id="tr-new-scope">
+        <label><input type="checkbox" value="hard" checked> Daily</label>
+      </div>
+      <div class="timer-log-line">Applies to every future workday</div>
+      <button class="btn sm primary" onclick="addTrainingItem(this)">Add</button>
+    </div>
+    <div id="trainingList"></div>
+  </div>
+
+  <!-- Exercise -->
+  <div class="card">
+    <div class="card-title">Exercise <span class="section-line"></span><button class="reset-link" onclick="resetExercise()">Reset</button></div>
+    <div id="exerciseList"></div>
+  </div>
+
+  <!-- Daily insight -->
+  <div class="card notes-section">
+    <div class="card-title">Daily Journal &amp; Retrospective <span class="section-line"></span></div>
+    
+    <div class="journal-stack">
+      <div class="journal-field">
+        <label>Strategic Win</label>
+        <textarea id="inp-wins" placeholder="What moved the needle today?" oninput="saveInput('wins',this.value)"></textarea>
+      </div>
+      
+      <div class="journal-field">
+        <label>Main Friction / Mistake</label>
+        <textarea id="inp-mistake" placeholder="Where was time lost or friction encountered?" oninput="saveInput('mistake',this.value)"></textarea>
+      </div>
+      
+      <div class="journal-field">
+        <label>Blocker / Constraint</label>
+        <textarea id="inp-blockers" placeholder="What stopped you from completing targets?" oninput="saveInput('blockers',this.value)"></textarea>
+      </div>
+      
+      <div class="journal-field">
+        <label>Tomorrow: The First Move</label>
+        <textarea id="inp-tomorrow" placeholder="Identify the first actionable task for tomorrow" oninput="saveInput('tomorrow',this.value)"></textarea>
+      </div>
+
+      <div class="journal-field">
+        <label>Strategic Insight</label>
+        <textarea id="inp-insight" placeholder="New rule, pattern, or lesson identified?" oninput="saveInput('insight',this.value)"></textarea>
+      </div>
+
+      <div class="journal-field">
+        <label>Raw Log &amp; Scratchpad</label>
+        <textarea id="inp-notes" placeholder="Detailed session notes, error log entries, or raw data logs..." style="min-height: 120px;" oninput="saveInput('notes',this.value)"></textarea>
+      </div>
+    </div>
+
+    <div class="mt48 mb16" style="display:flex; gap:12px; justify-content:center; padding-top: 10px; border-top: 1px solid var(--border2);">
+      <button class="btn primary" style="padding: 8px 24px;" onclick="quickRetrospective()">Consolidate Log</button>
+      <button class="btn" style="padding: 8px 16px;" onclick="addToErrorLogFromNotes()">+ Add to Error Log</button>
+    </div>
+  </div>
+
+</div><!-- /tab-daily -->
+
+<!-- ═══════════════════════ TAB: TIMER ═══════════════════════ -->
+<div class="tab-panel" id="tab-timer">
+  <div class="timer-page">
+    <div class="timer-shell">
+      <div class="timer-face" id="timerFace">
+        <div class="timer-center">
+          <div class="timer-display large" id="timerDisplay">25:00</div>
+          <div class="timer-state" id="timerState">Ready</div>
+          <div class="timer-meta">
+            <div class="timer-chip">Elapsed<strong id="timerElapsedMeta">00:00:00</strong></div>
+            <div class="timer-chip">Target<strong id="timerTargetMeta">00:25:00</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timer-panel">
+        <div class="timer-section-row">
+          <div class="timer-panel-title" style="margin-bottom:0;">Timer</div>
+          <div class="timer-log-line" id="timerModeSummary">Focus session</div>
+        </div>
+        <div class="timer-control-stack">
+          <div class="timer-section">
+            <div class="timer-modes">
+              <button class="timer-mode-btn active" onclick="setTimerMode('pomodoro')">Pomodoro</button>
+              <button class="timer-mode-btn" onclick="setTimerMode('free')">Free timer</button>
+            </div>
+          </div>
+
+          <div class="timer-section" id="timerDurationSection">
+            <div class="timer-panel-title">Durations</div>
+            <div class="timer-duration-grid">
+              <div class="timer-duration-card study" id="studyDurationCard">
+                <div class="timer-duration-head">
+                  <div>
+                    <div class="timer-duration-title">Study period</div>
+                    <div class="timer-duration-sub">Deep work countdown</div>
+                  </div>
+                  <div class="timer-duration-pill">Focus</div>
+                </div>
+                <div class="duration-control">
+                  <button onclick="adjustTimerDuration('pomodoro', -60)" title="Decrease study period by 1 minute">−</button>
+                  <input type="text" inputmode="numeric" id="timerPomodoroDuration" value="00:25:00" oninput="setTimerDuration('pomodoro', this.value)" aria-label="Study period duration">
+                  <button onclick="adjustTimerDuration('pomodoro', 60)" title="Increase study period by 1 minute">+</button>
+                </div>
+              </div>
+              <div class="timer-duration-card break" id="breakDurationCard">
+                <div class="timer-duration-head">
+                  <div>
+                    <div class="timer-duration-title">Break period</div>
+                    <div class="timer-duration-sub">Recovery countdown</div>
+                  </div>
+                  <div class="timer-duration-pill">Break</div>
+                </div>
+                <div class="duration-control">
+                  <button onclick="adjustTimerDuration('break', -60)" title="Decrease break period by 1 minute">−</button>
+                  <input type="text" inputmode="numeric" id="timerBreakDuration" value="00:05:00" oninput="setTimerDuration('break', this.value)" aria-label="Break period duration">
+                  <button onclick="adjustTimerDuration('break', 60)" title="Increase break period by 1 minute">+</button>
+                </div>
+              </div>
+            </div>
+            <div class="timer-presets-label">Study presets</div>
+            <div class="timer-presets">
+              <button class="timer-mode-btn" onclick="setTimerDuration('pomodoro','00:15:00')">15m</button>
+              <button class="timer-mode-btn" onclick="setTimerDuration('pomodoro','00:25:00')">25m</button>
+              <button class="timer-mode-btn" onclick="setTimerDuration('pomodoro','00:45:00')">45m</button>
+              <button class="timer-mode-btn" onclick="setTimerDuration('pomodoro','01:00:00')">1h</button>
+            </div>
+          </div>
+
+          <div class="timer-section">
+            <div class="timer-panel-title">Log target</div>
+            <select id="timerTargetSelect" class="timer-target-select" onchange="manualTimerTargetId = this.value || null; renderTimer()"></select>
+            <div class="timer-log-line" id="timerTargetHint">Auto selects the next unfinished training item.</div>
+          </div>
+
+          <div class="timer-status-grid">
+            <div class="timer-chip">Last log<strong id="timerLastLog">None</strong></div>
+            <div class="timer-chip">Mode<strong id="timerModeMeta">Pomodoro</strong></div>
+          </div>
+
+          <div class="timer-actions">
+            <button class="btn primary" id="timerStartBtn" onclick="toggleTimer()">Start</button>
+            <button class="btn danger hidden" id="timerDismissBtn" onclick="dismissTimerAlarm()">Dismiss alarm</button>
+            <button class="btn" id="timerLogBtn" onclick="logTimerToNextTask()">Log now</button>
+            <button class="btn" id="timerBreakBtn" onclick="toggleBreakMode()">Break</button>
+            <button class="btn" onclick="resetTimer()">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ TAB: WEEKLY LOG ═══════════════════════ -->
+<div class="tab-panel" id="tab-weekly">
+  <div class="weekly-command">
+    <div class="weekly-control-panel">
+      <div class="weekly-kicker">Weekly Control Summary</div>
+      <div class="weekly-headline" id="weeklyCommandTitle">Week readout pending</div>
+      <div class="weekly-copy" id="weeklyCommandCopy">Track inputs, recovery, and review quality. Trends beat single dots.</div>
+      <div class="weekly-score-grid" id="weeklyScoreGrid"></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Weekly Diagnosis <span class="section-line"></span></div>
+      <div class="weekly-diagnosis-list" id="weeklyDiagnosisList"></div>
+    </div>
+  </div>
+
+  <div class="weekly-status-grid" id="weeklyStatusGrid"></div>
+
+  <div class="weekly-graphs">
+    <div class="weekly-graph-card">
+              <div class="weekly-graph-title"><span>Hours Logged</span><strong id="weeklyHoursGraphMeta">—</strong></div>
+      <div id="weeklyHoursGraph"></div>
+    </div>
+    <div class="weekly-graph-card">
+      <div class="weekly-graph-title"><span>Completion Trend</span><strong id="weeklyCompletionGraphMeta">—</strong></div>
+      <div id="weeklyCompletionGraph"></div>
+    </div>
+    <div class="weekly-graph-card">
+      <div class="weekly-graph-title"><span>Recovery Graph</span><strong>Sleep + energy</strong></div>
+      <div id="weeklyRecoveryGraph"></div>
+    </div>
+    <div class="weekly-graph-card">
+              <div class="weekly-graph-title"><span>Task Mix</span><strong>practice / project / deep work</strong></div>
+      <div id="weeklyTrainingMix"></div>
+    </div>
+    <div class="weekly-graph-card full">
+      <div class="weekly-graph-title"><span>Non-Negotiables Heatmap</span><strong>AM / PM / Zeta / Light / Review / Screen</strong></div>
+      <div id="weeklyHeatmap"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" id="weeklyTitle">Weekly Log <span class="section-line"></span></div>
+    <div class="row mb12">
+      <button class="btn sm" onclick="prevWeek()">← Prev</button>
+      <span id="weekRangeLabel" style="font-size:.78rem; color:var(--dim)"></span>
+      <button class="btn sm" onclick="nextWeek()">Next →</button>
+      <span class="spacer"></span>
+      <input type="date" id="weeklyJumpDate" style="max-width:160px">
+      <button class="btn sm" onclick="jumpWeeklyLogToDate()">Go</button>
+      <button class="btn sm primary" onclick="goToThisWeek()">This Week</button>
+    </div>
+    <div class="weekly-table-wrap">
+      <table class="weekly-table" id="weeklyTable"></table>
+    </div>
+  </div>
+
+  <!-- Week summary -->
+  <div class="card" id="weekSummaryCard">
+    <div class="card-title">Week Summary <span class="section-line"></span></div>
+    <div id="weekSummary"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ TAB: BENCHMARKS ═══════════════════════ -->
+<div class="tab-panel" id="tab-metrics">
+
+  <div class="benchmark-command mb16">
+    <div class="benchmark-console">
+      <div class="bench-kicker">Custom Benchmarks</div>
+      <div class="bench-headline" id="benchCommandTitle">System readout pending</div>
+      <div class="bench-copy" id="benchCommandCopy">
+        Build your own scorecard. Keep the defaults, rename them, or replace them with benchmarks for fitness, study, work, money, recovery, or any personal system.
+      </div>
+      <div class="bench-score-grid" id="benchScoreGrid"></div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Add Benchmark <span class="section-line"></span></div>
+      <div class="custom-benchmark-form">
+        <input type="text" id="bench-new-name" placeholder="Metric name">
+        <input type="text" id="bench-new-current" placeholder="Current value">
+        <select id="bench-new-status">
+          <option value="green">Green</option>
+          <option value="amber">Amber</option>
+          <option value="red">Off-track</option>
+          <option value="grey">No data</option>
+        </select>
+        <input type="text" id="bench-new-good" placeholder="Green band">
+        <input type="text" id="bench-new-ok" placeholder="Amber band">
+        <input type="text" id="bench-new-bad" placeholder="Off-track band">
+        <input class="wide" type="text" id="bench-new-note" placeholder="Evidence / note">
+        <input class="wide" type="text" id="bench-new-action" placeholder="Action if this goes off-track">
+        <button class="btn primary sm wide" onclick="addCustomBenchmark()">Add Benchmark</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Live Diagnostics <span class="section-line"></span></div>
+    <div class="bench-diagnostic-grid" id="benchDiagnosticGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Benchmark Board <span class="section-line"></span></div>
+    <div class="benchmark-board" id="customBenchmarkBoard"></div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════ TAB: ERROR LOG ═══════════════════════ -->
+<div class="tab-panel" id="tab-errorlog">
+
+  <!-- Add entry -->
+  <div class="card">
+    <div class="card-title">Add Error Log Entry <span class="section-line"></span></div>
+    <div class="mb8">
+      <label style="font-size:.68rem;color:var(--dim);display:block;margin-bottom:4px">Problem / Source</label>
+      <input type="text" id="el-problem" placeholder="e.g. Project task, workout, meeting, study set">
+    </div>
+    <div class="mb8">
+      <label style="font-size:.68rem;color:var(--dim);display:block;margin-bottom:4px">What I Missed</label>
+      <input type="text" id="el-missed" placeholder="e.g. greedy failed, missed binary search on answer">
+    </div>
+    <div class="mb12">
+      <label style="font-size:.68rem;color:var(--dim);display:block;margin-bottom:4px">Pattern / Lesson</label>
+      <input type="text" id="el-pattern" placeholder="e.g. default to BS when function is monotonic">
+    </div>
+    <button class="btn primary" onclick="addErrorEntry()">Add Entry</button>
+  </div>
+
+  <!-- Pattern clusters / bottlenecks -->
+  <div class="card" id="bottlenecksCard">
+    <div class="card-title">Pattern Clusters <span class="section-line"></span></div>
+    <div id="bottlenecksList"></div>
+  </div>
+
+  <!-- Filter + list -->
+  <div class="card">
+    <div class="card-title">
+      All Entries <span class="section-line"></span>
+      <span class="count" id="elCount">0</span>
+    </div>
+    <div class="row mb12">
+      <input type="text" id="el-search" placeholder="Search entries…" oninput="renderErrorLog()" style="max-width:300px">
+      <button class="btn sm danger" onclick="clearErrorLog()">Clear All</button>
+    </div>
+    <div id="errorLogList"></div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════ TAB: DATA ═══════════════════════ -->
+<div class="tab-panel" id="tab-export">
+
+  <div class="card export-section">
+    <div class="card-title">File Autosave <span class="section-line"></span></div>
+    <div class="backup-status mb12" id="backupStatus">Local browser autosave is active. Connect a backup file for working-directory autosave.</div>
+    <div class="row mb12">
+      <button class="btn primary" onclick="connectBackupFile()">Connect backup file</button>
+      <button class="btn" onclick="writeBackupNow()">Save backup now</button>
+      <button class="btn" onclick="loadFromBackupFile()">Load from backup file</button>
+    </div>
+    <div style="font-size:.72rem; color:var(--dim)">Choose or create <strong>tracker-data.json</strong> in this folder. After permission is granted, typing in the tracker autosaves to that file.</div>
+  </div>
+
+  <div class="card export-section">
+    <div class="card-title">Export <span class="section-line"></span></div>
+    <div class="row mb12">
+      <button class="btn primary" onclick="exportJSON()">Export JSON (full backup)</button>
+      <button class="btn" onclick="exportCSV()">Export Weekly CSV</button>
+    </div>
+    <div style="font-size:.72rem; color:var(--dim)">JSON includes all daily data, task templates, error log, and benchmark settings.</div>
+  </div>
+
+  <div class="card export-section">
+    <div class="card-title">Daily Workload <span class="section-line"></span></div>
+    <div style="font-size:.78rem; color:var(--dim); line-height:1.5">
+      Workdays use one editable task set with a 6 hour reference. Saturday and Sunday stay rest days with a 0 hour target unless you customize them.
+    </div>
+  </div>
+
+  <div class="card export-section">
+    <div class="card-title">Import <span class="section-line"></span></div>
+    <div class="mb8" style="font-size:.72rem; color:var(--amber)">⚠ Importing will overwrite your current data.</div>
+    <input type="file" id="importFile" accept=".json" onchange="importJSON(this)" style="font-size:.75rem;color:var(--dim)">
+  </div>
+
+  <div class="card export-section">
+    <div class="card-title">Data Preview <span class="section-line"></span></div>
+    <code class="data-preview" id="dataPreview">Loading…</code>
+    <div class="row mt8">
+      <span style="font-size:.7rem;color:var(--dim)" id="dataSize"></span>
+      <span class="spacer"></span>
+      <button class="btn sm danger" onclick="resetAll()">Reset All Data</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════ JAVASCRIPT ═══════════════════════ -->
+<script src="app.js"></script>
+</body>
+</html>

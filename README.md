@@ -22,7 +22,9 @@ Your personal data is saved locally to tracker-data.json. This file is ignored b
 
 ## Files
 
-- Tracker.html - main app
+- index.html - main app shell
+- styles.css - app styles
+- app.js - app logic
 - tracker-server.js - local server and autosave API
 - motivation_quotes.json - quote data
 - assets/ - audio/assets
