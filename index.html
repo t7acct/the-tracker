@@ -26,6 +26,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('daily')">Daily</button>
     <button class="tab-btn" onclick="switchTab('timer')">Timer</button>
+    <button class="tab-btn" onclick="switchTab('reminders')">Reminders</button>
     <button class="tab-btn" onclick="switchTab('weekly')">Weekly Log</button>
     <button class="tab-btn" onclick="switchTab('metrics')">Benchmarks</button>
     <button class="tab-btn" onclick="switchTab('errorlog')">Error Log</button>
@@ -285,6 +286,25 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ TAB: REMINDERS ═══════════════════════ -->
+<div class="tab-panel" id="tab-reminders">
+  <div class="card">
+    <div class="card-title">New Reminder <span class="section-line"></span></div>
+    <div class="reminder-form">
+      <input type="text" id="reminderText" placeholder="Reminder">
+      <input type="date" id="reminderDate">
+      <input type="time" id="reminderTime">
+      <button class="btn primary" onclick="addReminder()">Add</button>
+      <textarea id="reminderNotes" placeholder="Notes / context"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Upcoming <span class="section-line"></span><span class="count" id="reminderCount">0</span></div>
+    <div id="reminderList" class="reminder-list"></div>
   </div>
 </div>
 

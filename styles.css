@@ -349,6 +349,59 @@ textarea { resize:vertical; min-height:80px; line-height:1.5; }
   font-size:.72rem;
   line-height:1.45;
 }
+.dash-reminders { grid-column:1 / -1; }
+.reminder-list {
+  display:grid;
+  gap:8px;
+}
+.reminder-row {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid var(--border);
+  background:var(--surf2);
+  border-radius:8px;
+  padding:10px;
+}
+.reminder-row.done { opacity:.55; }
+.reminder-check {
+  width:20px; height:20px; accent-color:var(--accent); cursor:pointer;
+}
+.reminder-main { min-width:0; }
+.reminder-title {
+  color:var(--text);
+  font-size:.84rem;
+  line-height:1.35;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.reminder-row.done .reminder-title { text-decoration:line-through; }
+.reminder-meta {
+  color:var(--dim);
+  font-size:.68rem;
+  line-height:1.4;
+  margin-top:2px;
+}
+.reminder-due {
+  color:var(--accent);
+  font-size:.68rem;
+  white-space:nowrap;
+  text-align:right;
+}
+.reminder-due.overdue { color:var(--red); }
+.reminder-form {
+  display:grid;
+  grid-template-columns:minmax(180px,1.4fr) 150px 110px auto;
+  gap:8px;
+  align-items:center;
+  margin-bottom:12px;
+}
+.reminder-form textarea {
+  grid-column:1 / -2;
+  min-height:58px;
+}
 .dash-chart-grid {
   grid-column:1 / -1;
   display:grid;
@@ -1402,6 +1455,9 @@ code.data-preview {
   .week-nav { grid-template-columns:1fr; }
   .week-nav-controls, .week-nav-jump { justify-content:flex-start; }
   .list-editor { grid-template-columns:1fr; }
+  .reminder-form, .reminder-row { grid-template-columns:1fr; }
+  .reminder-form textarea { grid-column:auto; }
+  .reminder-due { text-align:left; }
   .dashboard-grid { grid-template-columns:1fr 1fr; }
   .dashboard-grid .dash-panel.primary,
   .dashboard-grid .dash-next,
