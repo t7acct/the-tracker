@@ -4,7 +4,7 @@ const path = require('path');
 const { exec } = require('child_process');
 
 const root = __dirname;
-const htmlPath = path.join(root, 'Tracker.html');
+const htmlPath = path.join(root, 'index.html');
 const dataPath = path.join(root, 'tracker-data.json');
 const port = Number(process.env.PORT || 8765);
 const host = '127.0.0.1';
@@ -26,10 +26,18 @@ function send(res, status, body, type = 'text/plain; charset=utf-8') {
 
 function contentTypeFor(filePath) {
   const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.html') return 'text/html; charset=utf-8';
+  if (ext === '.css') return 'text/css; charset=utf-8';
+  if (ext === '.js') return 'application/javascript; charset=utf-8';
+  if (ext === '.json') return 'application/json; charset=utf-8';
   if (ext === '.mp3') return 'audio/mpeg';
   if (ext === '.wav') return 'audio/wav';
   if (ext === '.ogg') return 'audio/ogg';
   return 'application/octet-stream';
+}
+
+function sendFile(res, filePath) {
+  send(res, 200, fs.readFileSync(filePath), contentTypeFor(filePath));
 }
 
 function readBackup() {
@@ -87,8 +95,8 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
-    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/Tracker.html')) {
-      send(res, 200, fs.readFileSync(htmlPath), 'text/html; charset=utf-8');
+    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/Tracker.html')) {
+      sendFile(res, htmlPath);
       return;
     }
 
@@ -110,13 +118,21 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/motivation_quotes.json') {
       const qPath = path.join(root, 'motivation_quotes.json');
-      send(res, 200, fs.readFileSync(qPath), 'application/json; charset=utf-8');
+      sendFile(res, qPath);
       return;
     }
 
     if (req.method === 'GET' && url.pathname === '/tracker-data.json') {
       send(res, 200, JSON.stringify(readBackup(), null, 2), 'application/json; charset=utf-8');
       return;
+    }
+
+    if (req.method === 'GET' && ['/styles.css', '/app.js'].includes(url.pathname)) {
+      const staticPath = path.normalize(path.join(root, decodeURIComponent(url.pathname)));
+      if (fs.existsSync(staticPath) && fs.statSync(staticPath).isFile()) {
+        sendFile(res, staticPath);
+        return;
+      }
     }
 
     if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
@@ -126,7 +142,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       if (fs.existsSync(assetPath) && fs.statSync(assetPath).isFile()) {
-        send(res, 200, fs.readFileSync(assetPath), contentTypeFor(assetPath));
+        sendFile(res, assetPath);
         return;
       }
     }
