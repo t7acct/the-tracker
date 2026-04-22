@@ -275,7 +275,6 @@ function normalizeState() {
   if (!state.removedTraining) state.removedTraining = {};
   if (!state.trainingTemplates) state.trainingTemplates = {};
   if (!state.nonNegOverrides) state.nonNegOverrides = {};
-  if (!state.exerciseOverrides) state.exerciseOverrides = {};
   if (!state.timerSettings) state.timerSettings = {};
   if (!state.timerSettings.pomodoroMs) state.timerSettings.pomodoroMs = Math.max(1, +(state.timerSettings.pomodoroMinutes || 25)) * 60 * 1000;
   if (!state.timerSettings.breakMs) state.timerSettings.breakMs = 5 * 60 * 1000;
@@ -302,7 +301,7 @@ let selectedDate = todayStr();
 let weekOffset   = 0; // for weekly tab navigation
 let editingTrainingId = null;
 let editingNonNegId = null;
-let editingExercise = false;
+let editingExerciseId = null;
 let dragTrainingId = null;
 let pendingTrainingEdit = null;
 let pendingNonNegEdit   = null;
@@ -368,7 +367,7 @@ function defaultDayState() {
     mode:null, checks:{}, energy:null, sleepHours:null, lightsOut:'', focusScore:null,
     practiceReps:0, projectReps:0, oaScore:null, deepWorkReps:0, insight:'', notes:'',
     taskHours:{}, wins:'', blockers:'', tomorrow:'', mistake:'', mood:null, distractions:0,
-    ankiCards:0, readingMins:0, contestDone:false
+    ankiCards:0, readingMins:0, contestDone:false, exercises: []
   };
 }
 
@@ -438,19 +437,9 @@ function saveNonNegTemplate(items, fromDate = effectiveTemplateDate()) {
   state.nonNegTemplates.sort((a,b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
 }
 
-function getExercise(dow) {
-  const base = EXERCISE_BY_DOW[dow];
-  if (!base) return null;
-  return { ...base, ...((state.exerciseOverrides || {})[dow] || {}) };
-}
-
-function getExerciseForDate(ds) {
-  const dow = parseDateKey(ds).getDay();
-  const base = EXERCISE_BY_DOW[dow];
-  if (!base) return null;
-  const dowOverride  = (state.exerciseOverrides || {})[dow] || {};
-  const dateOverride = (state.exerciseDateOverrides || {})[ds] || {};
-  return { ...base, ...dowOverride, ...dateOverride };
+function getExercises(ds = selectedDate) {
+  const d = getDay(ds);
+  return d.exercises || [];
 }
 
 function defaultTrainingForDifficulty(difficulty) {
@@ -513,24 +502,13 @@ function clearInputs(ids) {
   ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 
-function getCheckedScopes(containerId) {
-  const checked = [...document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)].map(input => input.value);
-  return [...new Set(checked.filter(value => DIFFICULTY_KEYS.includes(value)))];
-}
-
-function renderScopeBadges(item) {
-  const scopes = normalizeAppliesTo(item.appliesTo);
-  if (scopes.length === DIFFICULTY_KEYS.length) return '';
-  return `<div class="scope-badges">${scopes.map(scope => `<span class="scope-badge">${DIFFICULTY_LABELS[scope]}</span>`).join('')}</div>`;
-}
-
 function adjustInpValue(id, delta) {
   const el = document.getElementById(id);
   if (!el) return;
   const isTime = id.includes('Hours');
   let val = isTime ? parseTimeStr(el.value) : parseFloat(el.value);
   if (isNaN(val)) val = 0;
-  
+
   const newVal = Math.max(0, val + delta);
   el.value = isTime ? formatHours(newVal) : newVal;
 }
@@ -550,50 +528,7 @@ function showToast(message, kind = 'success') {
   }, 3000);
 }
 
-function closeScopePopup() {
-  const el = document.getElementById('scopePopup');
-  if (el) el.remove();
-  if (_scopeOutsideHandler) {
-    document.removeEventListener('click', _scopeOutsideHandler);
-    _scopeOutsideHandler = null;
-  }
-}
-
-function showScopePopup(anchorEl, dayName, dateLabel, onAllWeekdays, onThisDayOnly, onThisDateOnly, onCancel) {
-  closeScopePopup();
-  const popup = document.createElement('div');
-  popup.id = 'scopePopup';
-  popup.className = 'scope-popup';
-  popup.innerHTML = `
-    <div class="scope-popup-label">Apply change to</div>
-    <button class="scope-popup-btn" id="scopeAll"><span class="scope-icon">📅</span>All weekdays (Mon–Fri) permanently</button>
-    <button class="scope-popup-btn" id="scopeDay"><span class="scope-icon">🔁</span>Every ${dayName} going forward</button>
-    <button class="scope-popup-btn" id="scopeDate"><span class="scope-icon">📌</span>This date only (${dateLabel})</button>
-  `;
-  document.body.appendChild(popup);
-  const rect = anchorEl.getBoundingClientRect();
-  popup.style.top = (rect.bottom + 6) + 'px';
-  popup.style.left = rect.left + 'px';
-  requestAnimationFrame(() => {
-    const pr = popup.getBoundingClientRect();
-    if (pr.right > window.innerWidth - 10) popup.style.left = (window.innerWidth - pr.width - 10) + 'px';
-    if (pr.bottom > window.innerHeight - 10) popup.style.top = (rect.top - pr.height - 6) + 'px';
-  });
-  const choose = fn => e => {
-    e.stopPropagation();
-    if (_scopeOutsideHandler) { document.removeEventListener('click', _scopeOutsideHandler); _scopeOutsideHandler = null; }
-    closeScopePopup();
-    fn();
-  };
-  document.getElementById('scopeAll').onclick  = choose(onAllWeekdays);
-  document.getElementById('scopeDay').onclick  = choose(onThisDayOnly);
-  document.getElementById('scopeDate').onclick = choose(onThisDateOnly);
-  _scopeOutsideHandler = () => { _scopeOutsideHandler = null; closeScopePopup(); if (onCancel) onCancel(); };
-  setTimeout(() => document.addEventListener('click', _scopeOutsideHandler, { once: true }), 0);
-}
-
-function formatDateLabel(ds) {
-  try {
+function formatDateLabel(ds) {  try {
     return formatDate(ds, { weekday: 'short', day: 'numeric', month: 'short' });
   } catch { return ds; }
 }
@@ -800,47 +735,28 @@ function addNonNeg(btn) {
   const meta = document.getElementById('nn-new-meta').value.trim();
   const tag = document.getElementById('nn-new-tag').value.trim();
   if (!text) return;
-  const scopes = getCheckedScopes('nn-new-scope');
-  if (!scopes.length) { showToast('Daily task scope missing', 'danger'); return; }
-  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
-  const newItem = { id: newCustomId('nn_custom'), text, meta, tag, appliesTo: scopes };
-  const doAdd = (saveFn) => {
-    const items = getNonNegTemplateItems(ds).map(stripRuntime);
-    items.push(newItem);
-    saveFn(items);
-    clearInputs(['nn-new-text', 'nn-new-meta', 'nn-new-tag']);
-    save(); renderDaily();
-  };
-  showScopePopup(btn, dayName, ds,
-    () => doAdd(i => saveNonNegTemplate(i)),
-    () => doAdd(i => saveNonNegTemplateForDow(i, dow)),
-    () => doAdd(i => { if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {}; state.nonNegDateOverrides[ds] = i; })
-  );
+  const newItem = { id: newCustomId('nn_custom'), text, meta, tag, appliesTo: ['hard'] };
+  
+  const items = getNonNegTemplateItems(ds).map(stripRuntime);
+  items.push(newItem);
+  if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {};
+  state.nonNegDateOverrides[ds] = items;
+  
+  clearInputs(['nn-new-text', 'nn-new-meta', 'nn-new-tag']);
+  save(); renderDaily();
 }
 
 function removeNonNeg(id, btn) {
-  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
-  const doRemove = (saveFn) => {
-    const items = getNonNegTemplateItems(ds).filter(item => item.id !== id).map(stripRuntime);
-    saveFn(items);
-    save(); renderDaily();
-  };
-  showScopePopup(btn, dayName, ds,
-    () => doRemove(i => saveNonNegTemplate(i)),
-    () => doRemove(i => saveNonNegTemplateForDow(i, dow)),
-    () => doRemove(i => { if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {}; state.nonNegDateOverrides[ds] = i; })
-  );
+  const items = getNonNegTemplateItems(ds).filter(item => item.id !== id).map(stripRuntime);
+  if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {};
+  state.nonNegDateOverrides[ds] = items;
+  save(); renderDaily();
 }
 
 function resetNonNegs() {
-  saveNonNegTemplate(NON_NEGS);
   if (state.nonNegDateOverrides) delete state.nonNegDateOverrides[selectedDate];
-  const dow = parseDateKey(selectedDate).getDay();
-  if (state.nonNegTemplatesByDow) delete state.nonNegTemplatesByDow[dow];
   pendingNonNegEdit = null;
   save();
   renderDaily();
@@ -857,69 +773,48 @@ function updateNonNeg(id, source, field, value) {
 }
 
 function confirmNonNegEdit(doneBtn) {
-  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
   const items = (pendingNonNegEdit?.ds === ds ? pendingNonNegEdit.items : getNonNegTemplateItems(ds)).map(stripRuntime);
-  const commit = saveFn => { saveFn(); pendingNonNegEdit = null; save(); editingNonNegId = null; renderDaily(); };
-  const cancel = () => { pendingNonNegEdit = null; editingNonNegId = null; renderDaily(); };
-  showScopePopup(doneBtn, dayName, formatDateLabel(ds),
-    () => commit(() => saveNonNegTemplate(items)),
-    () => commit(() => saveNonNegTemplateForDow(items, dow)),
-    () => commit(() => { if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {}; state.nonNegDateOverrides[ds] = items; }),
-    cancel
-  );
+  if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {};
+  state.nonNegDateOverrides[ds] = items;
+  pendingNonNegEdit = null;
+  editingNonNegId = null;
+  save();
+  renderDaily();
 }
 
 function addTrainingItem(btn) {
-  const dow = parseDateKey(selectedDate).getDay();
-  if (defaultDifficultyForDow(dow) === 'rest') {
-    showToast('Rest days use no daily task set', 'danger');
-    return;
-  }
-  const difficulties = getCheckedScopes('tr-new-scope');
   const text = document.getElementById('tr-new-text').value.trim();
   const meta = document.getElementById('tr-new-meta').value.trim();
   const tag = document.getElementById('tr-new-tag').value.trim();
   if (!text) return;
-  if (!difficulties.length) {
-    showToast('Daily task scope missing', 'danger');
-    return;
-  }
+  
   const id = newCustomId('tr_custom');
-  const difficulty = 'hard';
   const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
-  const newItem = { id, trackingId: id, text, meta, tag, time: '', appliesTo: difficulties };
-  const doAdd = (saveFn) => {
-    const items = getTraining(difficulty, dow, ds).map(stripRuntime);
-    items.push(newItem);
-    saveFn(items);
-    clearInputs(['tr-new-text', 'tr-new-meta', 'tr-new-tag']);
-    save(); renderDaily();
-  };
-  showScopePopup(btn, dayName, ds,
-    () => doAdd(i => saveDailyTaskTemplate(i, difficulty)),
-    () => doAdd(i => saveTrainingTemplate(difficulty, dow, i)),
-    () => doAdd(i => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = i; })
-  );
+  const newItem = { id, trackingId: id, text, meta, tag, time: '', appliesTo: ['hard'] };
+  
+  const items = getTraining('hard', parseDateKey(ds).getDay(), ds).map(stripRuntime);
+  items.push(newItem);
+  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
+  state.trainingDateOverrides[ds] = items;
+  
+  clearInputs(['tr-new-text', 'tr-new-meta', 'tr-new-tag']);
+  save(); renderDaily();
 }
 
 function removeTrainingItem(difficulty, id, btn) {
-  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
+  const dow = parseDateKey(ds).getDay();
   const trackingId = trackingIdForTask(getTraining(difficulty, dow, ds).find(item => item.id === id) || id);
   const items = getTraining('hard', dow, ds).filter(item => trackingIdForTask(item) !== trackingId).map(stripRuntime);
-  showScopePopup(btn, dayName, ds,
-    () => { saveDailyTaskTemplate(items); save(); renderDaily(); },
-    () => { saveTrainingTemplate('hard', dow, items); save(); renderDaily(); },
-    () => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = items; save(); renderDaily(); }
-  );
+  
+  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
+  state.trainingDateOverrides[ds] = items;
+  save(); renderDaily();
 }
 
 function resetTrainingMode(difficulty) {
-  saveDailyTaskTemplate(defaultTrainingForDifficulty('hard'));
+  if (state.trainingDateOverrides) delete state.trainingDateOverrides[selectedDate];
   save();
   renderDaily();
 }
@@ -934,25 +829,20 @@ function updateTrainingTask(difficulty, id, field, value) {
 }
 
 function confirmTrainingEdit(doneBtn) {
-  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
-  const items = (pendingTrainingEdit?.ds === ds ? pendingTrainingEdit.items : getTraining('hard', dow, ds)).map(stripRuntime);
-  const commit = saveFn => { saveFn(); pendingTrainingEdit = null; save(); editingTrainingId = null; renderDaily(); };
-  const cancel = () => { pendingTrainingEdit = null; editingTrainingId = null; renderDaily(); };
-  showScopePopup(doneBtn, dayName, formatDateLabel(ds),
-    () => commit(() => saveDailyTaskTemplate(items)),
-    () => commit(() => saveTrainingTemplate('hard', dow, items)),
-    () => commit(() => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = items; }),
-    cancel
-  );
+  const items = (pendingTrainingEdit?.ds === ds ? pendingTrainingEdit.items : getTraining('hard', parseDateKey(ds).getDay(), ds)).map(stripRuntime);
+  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
+  state.trainingDateOverrides[ds] = items;
+  pendingTrainingEdit = null;
+  editingTrainingId = null;
+  save();
+  renderDaily();
 }
 
 function reorderTrainingItem(difficulty, fromId, toId, anchorEl) {
   if (!fromId || !toId || fromId === toId) { dragTrainingId = null; return; }
   const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
   const items = getTraining('hard', dow, ds).map(stripRuntime);
   const fromIndex = items.findIndex(item => item.id === fromId);
   const toIndex   = items.findIndex(item => item.id === toId);
@@ -960,11 +850,10 @@ function reorderTrainingItem(difficulty, fromId, toId, anchorEl) {
   const [moved] = items.splice(fromIndex, 1);
   const targetIndex = items.findIndex(item => item.id === toId);
   items.splice(targetIndex < 0 ? toIndex : targetIndex, 0, moved);
-  showScopePopup(anchorEl, dayName, formatDateLabel(ds),
-    () => { saveDailyTaskTemplate(items); save(); renderDaily(); },
-    () => { saveTrainingTemplate('hard', dow, items); save(); renderDaily(); },
-    () => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = items; save(); renderDaily(); }
-  );
+
+  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
+  state.trainingDateOverrides[ds] = items;
+  save(); renderDaily();
 }
 
 function startTrainingDrag(id) {
@@ -976,36 +865,55 @@ function dropTrainingItem(difficulty, targetId, anchorEl) {
   dragTrainingId = null;
 }
 
-function updateExercise(field, value) {
+function addExercise(btn) {
+  const text = document.getElementById('ex-new-text').value.trim();
+  const meta = document.getElementById('ex-new-meta').value.trim();
+  const tag = document.getElementById('ex-new-tag').value.trim();
+  if (!text) return;
+
+  const id = newCustomId('ex_custom');
+  const d = getDay(selectedDate);
+  if (!d.exercises) d.exercises = [];
+  d.exercises.push({ id, text, meta, tag });
+
+  clearInputs(['ex-new-text', 'ex-new-meta', 'ex-new-tag']);
+  save();
+  renderDaily();
+}
+
+function removeExercise(id, btn) {
+  const d = getDay(selectedDate);
+  if (!d.exercises) return;
+  d.exercises = d.exercises.filter(ex => ex.id !== id);
+  save();
+  renderDaily();
+}
+
+function updateExercise(id, field, value) {
   if (!pendingExerciseEdit || pendingExerciseEdit.ds !== selectedDate) {
-    const dow = parseDateKey(selectedDate).getDay();
-    const cur = getExerciseForDate(selectedDate) || {};
-    pendingExerciseEdit = { ds: selectedDate, fields: { text: cur.text || '', meta: cur.meta || '' } };
+    const d = getDay(selectedDate);
+    pendingExerciseEdit = { ds: selectedDate, items: (d.exercises || []).map(ex => ({ ...ex })) };
   }
-  pendingExerciseEdit.fields[field] = value;
+  const item = pendingExerciseEdit.items.find(ex => ex.id === id);
+  if (item) item[field] = value;
 }
 
-function confirmExerciseEdit(doneBtn) {
-  const dow = parseDateKey(selectedDate).getDay();
-  const ds = selectedDate;
-  const dayName = DAY_FULL[dow];
-  const fields = pendingExerciseEdit?.ds === ds ? { ...pendingExerciseEdit.fields } : {};
-  const commit = saveFn => { saveFn(); pendingExerciseEdit = null; save(); editingExercise = false; renderDaily(); };
-  const cancel = () => { pendingExerciseEdit = null; editingExercise = false; renderDaily(); };
-  showScopePopup(doneBtn, dayName, formatDateLabel(ds),
-    () => commit(() => WORKDAY_DOWS.forEach(d => { if (!state.exerciseOverrides[d]) state.exerciseOverrides[d] = {}; Object.assign(state.exerciseOverrides[d], fields); })),
-    () => commit(() => { if (!state.exerciseOverrides[dow]) state.exerciseOverrides[dow] = {}; Object.assign(state.exerciseOverrides[dow], fields); }),
-    () => commit(() => { if (!state.exerciseDateOverrides) state.exerciseDateOverrides = {}; if (!state.exerciseDateOverrides[ds]) state.exerciseDateOverrides[ds] = {}; Object.assign(state.exerciseDateOverrides[ds], fields); }),
-    cancel
-  );
-}
-
-function resetExercise() {
-  const dow = parseDateKey(selectedDate).getDay();
-  delete state.exerciseOverrides[dow];
-  if (state.exerciseDateOverrides) delete state.exerciseDateOverrides[selectedDate];
+function confirmExerciseEdit(id) {
+  if (!pendingExerciseEdit || pendingExerciseEdit.ds !== selectedDate) {
+    editingExerciseId = null;
+    renderDaily();
+    return;
+  }
+  const d = getDay(selectedDate);
+  const updatedItem = pendingExerciseEdit.items.find(ex => ex.id === id);
+  if (updatedItem && d.exercises) {
+    const idx = d.exercises.findIndex(ex => ex.id === id);
+    if (idx !== -1) {
+      d.exercises[idx] = { ...updatedItem };
+    }
+  }
   pendingExerciseEdit = null;
-  editingExercise = false;
+  editingExerciseId = null;
   save();
   renderDaily();
 }
@@ -1466,8 +1374,7 @@ function getAllHabitIds(difficulty, dow, ds = selectedDate) {
   const ids = [];
   getNonNegs(ds, difficulty).forEach(h => ids.push(h.id));
   getTraining(difficulty, dow, ds).forEach(h => ids.push(trackingIdForTask(h)));
-  const ex = getExercise(dow);
-  if (ex) ids.push(ex.id);
+  getExercises(ds).forEach(h => ids.push(h.id));
   if (dow === 0) SUNDAY_PROTOCOL.forEach(h => ids.push(h.id));
   return [...new Set(ids)];
 }
@@ -1583,9 +1490,8 @@ function computeMetrics() {
   let z2Count = 0;
   thisWeek.forEach(ds => {
     const d = getDay(ds);
-    const dow = parseDateKey(ds).getDay();
-    const ex = getExercise(dow);
-    if (ex && ex.text.includes('Zone 2') && isCheckDone(d, ex.id)) z2Count++;
+    const exercises = getExercises(ds);
+    if (exercises.some(ex => ex.text.includes('Zone 2') && isCheckDone(d, ex.id))) z2Count++;
   });
 
   // Practice reps this week
@@ -1839,17 +1745,19 @@ function resetTimer(options = {}) {
   renderTimer();
 }
 
-function currentTrainingContext() {
-  const dow = parseDateKey(selectedDate).getDay();
-  const d = getDay(selectedDate);
+function currentTrainingContext(ds = selectedDate) {
+  const dow = parseDateKey(ds).getDay();
+  const d = getDay(ds);
   const difficulty = defaultDifficultyForDow(dow);
-  return { dow, d, difficulty, training:getTraining(difficulty, dow, selectedDate) };
+  return { dow, d, difficulty, training:getTraining(difficulty, dow, ds) };
 }
 
-function getNextTrainingTask(trainingOverride = null, dayOverride = null) {
-  const context = trainingOverride ? { d: dayOverride || getDay(selectedDate), training: trainingOverride } : currentTrainingContext();
+function getNextTrainingTask(trainingOverride = null, dayOverride = null, dsOverride = null) {
+  const ds = dsOverride || selectedDate;
+  const context = trainingOverride ? { d: dayOverride || getDay(ds), training: trainingOverride } : currentTrainingContext(ds);
   const { d, training } = context;
   if (manualTimerTargetId) {
+    // If manual target exists, check if it exists in the *relevant* training list (today's)
     const selectedTask = training.find(task => task.id === manualTimerTargetId);
     if (selectedTask) return selectedTask;
     manualTimerTargetId = null;
@@ -1857,28 +1765,33 @@ function getNextTrainingTask(trainingOverride = null, dayOverride = null) {
   return training.find(task => !isCheckDone(d, trackingIdForTask(task))) || training[0] || null;
 }
 
-function getAutoTrainingTask(trainingOverride = null, dayOverride = null) {
-  const context = trainingOverride ? { d: dayOverride || getDay(selectedDate), training: trainingOverride } : currentTrainingContext();
+function getAutoTrainingTask(trainingOverride = null, dayOverride = null, dsOverride = null) {
+  const ds = dsOverride || selectedDate;
+  const context = trainingOverride ? { d: dayOverride || getDay(ds), training: trainingOverride } : currentTrainingContext(ds);
   const { d, training } = context;
   return training.find(task => !isCheckDone(d, trackingIdForTask(task))) || training[0] || null;
 }
 
 function logTimerToNextTask(options = {}) {
-  if (timerBreakMode) return; 
+  if (timerBreakMode) return;
   const elapsed = timerElapsedTotal();
   if (elapsed < 1000) return;
-  const task = getNextTrainingTask();
+
+  const today = todayStr();
+  const context = currentTrainingContext(today);
+  const task = getNextTrainingTask(context.training, context.d, today);
   if (!task) return;
-  const d = getDay(selectedDate);
+
+  const d = context.d;
   const hours = elapsed / 3600000;
   const taskKey = trackingIdForTask(task);
-  
+
   const current = +(d.taskHours[taskKey] || 0);
   d.taskHours[taskKey] = Math.round((current + hours) * 10000) / 10000;
-  
+
   const timeLabel = formatHours(hours);
-  timerLastLog = `Logged ${timeLabel} to ${task.text}`;
-  
+  timerLastLog = `Logged ${timeLabel} to ${task.text} (${today})`;
+
   timerElapsedMs = 0;
   timerRunning = !!options.keepRunning && timerRunning;
   timerStartedAt = timerRunning ? Date.now() : null;
@@ -1887,7 +1800,6 @@ function logTimerToNextTask(options = {}) {
   if (!options.silent) showToast(timerLastLog, 'success');
   renderAll();
 }
-
 function toggleBreakMode() {
   dismissTimerAlarm();
   const elapsed = timerElapsedTotal();
@@ -1954,17 +1866,18 @@ function renderTimer() {
     face.classList.toggle('alarm', alarmActive);
   }
 
-  // Update Target Select
-  const { d, training } = currentTrainingContext();
-  const selectedTask = getNextTrainingTask(training, d);
-  const autoTask = getAutoTrainingTask(training, d);
+  // Update Target Select (Always based on TODAY)
+  const today = todayStr();
+  const context = currentTrainingContext(today);
+  const selectedTask = getNextTrainingTask(context.training, context.d, today);
+  const autoTask = getAutoTrainingTask(context.training, context.d, today);
   const select = document.getElementById('timerTargetSelect');
   if (select) {
     const previousValue = manualTimerTargetId || '';
     select.innerHTML = '';
     select.add(new Option(autoTask ? `Auto: ${autoTask.text}` : 'Auto: No training items', ''));
-    training.forEach(task => select.add(new Option(task.text, task.id)));
-    select.value = training.some(task => task.id === previousValue) ? previousValue : '';
+    context.training.forEach(task => select.add(new Option(task.text, task.id)));
+    select.value = context.training.some(task => task.id === previousValue) ? previousValue : '';
     manualTimerTargetId = select.value || null;
   }
 
@@ -1990,8 +1903,8 @@ function renderTimer() {
   const targetHint = document.getElementById('timerTargetHint');
   if (targetHint) {
     targetHint.textContent = selectedTask
-      ? `${manualTimerTargetId ? 'Manual target' : 'Auto target'}: ${selectedTask.text}`
-      : 'Add a training item to log timer sessions.';
+      ? `${manualTimerTargetId ? 'Manual target' : 'Auto target'}: ${selectedTask.text} (Logging to today)`
+      : 'Add a training item to today to log timer sessions.';
   }
 
   const durationSection = document.getElementById('timerDurationSection');
@@ -2089,10 +2002,14 @@ function updateFallbackHint() {
 // ──────────────────────────────────────────────────────────────────
 
 function renderDaily() {
-  // Clear stale in-memory edit buffers when edit modes are off
-  if (!editingTrainingId && pendingTrainingEdit) pendingTrainingEdit = null;
-  if (!editingNonNegId   && pendingNonNegEdit)   pendingNonNegEdit   = null;
-  if (!editingExercise   && pendingExerciseEdit)  pendingExerciseEdit = null;
+  // Clear stale in-memory edit buffers when edit modes are off or date changed
+  const trDateMatch = pendingTrainingEdit && pendingTrainingEdit.ds === selectedDate;
+  const nnDateMatch = pendingNonNegEdit   && pendingNonNegEdit.ds   === selectedDate;
+  const exDateMatch = pendingExerciseEdit && pendingExerciseEdit.ds === selectedDate;
+
+  if (!editingTrainingId || !trDateMatch) { if (!editingTrainingId) pendingTrainingEdit = null; if (!trDateMatch) { editingTrainingId = null; pendingTrainingEdit = null; } }
+  if (!editingNonNegId   || !nnDateMatch) { if (!editingNonNegId)   pendingNonNegEdit   = null; if (!nnDateMatch) { editingNonNegId   = null; pendingNonNegEdit   = null; } }
+  if (!editingExerciseId || !exDateMatch) { if (!editingExerciseId) pendingExerciseEdit = null; if (!exDateMatch) { editingExerciseId = null; pendingExerciseEdit = null; } }
 
   const dow = parseDateKey(selectedDate).getDay();
   const d   = getDay(selectedDate);
@@ -2129,8 +2046,11 @@ function renderDaily() {
   if (tbEl) tbEl.textContent = `${tbDone}/${training.length}`;
 
   // Exercise
-  const ex = getExerciseForDate(selectedDate);
-  renderExerciseList('exerciseList', ex, d);
+  const exercises = getExercises(selectedDate);
+  const exDone = exercises.filter(h => isCheckDone(d, h.id)).length;
+  const exEl = document.getElementById('exCount');
+  if (exEl) exEl.textContent = `${exDone}/${exercises.length}`;
+  renderExerciseList('exerciseList', exercises, d);
 
   // Progress
   const allIds = getAllHabitIds(difficulty, dow, selectedDate);
@@ -2284,7 +2204,6 @@ function renderHabitList(containerId, habits, d, countId, listKind = null) {
       <div style="flex:1; min-width:0">
         <div class="habit-text">${escapeAttr(h.text)}</div>
         ${h.meta ? `<div class="habit-meta">${escapeAttr(h.meta)}</div>` : ''}
-        ${renderScopeBadges(h)}
       </div>
       ${h.tag  ? `<span class="habit-tag">${escapeAttr(h.tag)}</span>` : ''}
       ${listKind === 'nonneg' ? `<div class="item-actions"><button class="icon-btn" title="Remove" onclick="event.stopPropagation(); removeNonNeg('${h.id}',this)">×</button></div>` : ''}`;
@@ -2342,7 +2261,6 @@ function renderTrainingList(containerId, habits, d, mode) {
         <div class="task-view-main">
           <div class="habit-text">${escapeAttr(h.text || '')}</div>
           ${h.meta ? `<div class="habit-meta">${escapeAttr(h.meta)}</div>` : ''}
-          ${renderScopeBadges(h)}
         </div>
         ${h.tag ? `<span class="habit-tag">${escapeAttr(h.tag)}</span>` : '<span></span>'}
         <button class="task-hours-chip" onclick="event.stopPropagation(); editingTrainingId='${taskKey}'; renderDaily()"><strong>${formatHours(hours)}</strong></button>
@@ -2368,40 +2286,46 @@ function renderHoursControl(id, value) {
   </div>`;
 }
 
-function renderExerciseList(containerId, habit, d) {
+function renderExerciseList(containerId, exercises, d) {
   const el = document.getElementById(containerId);
   el.innerHTML = '';
-  if (!habit) return;
-  const checked = isCheckDone(d, habit.id);
-  const item = document.createElement('div');
-  item.className = 'habit-item editable-row' + (checked ? ' done' : '') + (editingExercise ? ' editing' : '');
-  const exBuf = editingExercise && pendingExerciseEdit?.ds === selectedDate ? pendingExerciseEdit.fields : null;
-  const exh = exBuf ? { ...habit, ...exBuf } : habit;
-  item.innerHTML = editingExercise ? `
-    <div class="habit-check">${checked ? '✓' : ''}</div>
-    <div class="exercise-editor">
-      <input type="text" value="${escapeAttr(exh.text || '')}" aria-label="Exercise title" onclick="event.stopPropagation()" oninput="updateExercise('text',this.value)">
-      <input type="text" value="${escapeAttr(exh.meta || '')}" aria-label="Exercise note" onclick="event.stopPropagation()" oninput="updateExercise('meta',this.value)">
-      <button class="btn sm" onclick="event.stopPropagation(); confirmExerciseEdit(this)">Done</button>
-      <button class="btn sm danger" onclick="event.stopPropagation(); resetExercise()">Reset</button>
-    </div>` : `
-    <div class="habit-check">${checked ? '✓' : ''}</div>
-    <div style="flex:1; min-width:0">
-      <div class="habit-text">${escapeAttr(habit.text || '')}</div>
-      ${habit.meta ? `<div class="habit-meta">${escapeAttr(habit.meta)}</div>` : ''}
-    </div>`;
-  item.onclick = () => { toggle(selectedDate, habit.id); };
-  item.querySelector('.habit-text')?.addEventListener('click', event => {
-    event.stopPropagation();
-    editingExercise = true;
-    renderDaily();
+  if (!exercises.length) {
+    el.innerHTML = `<div class="dash-empty">No exercise items yet. Add your first item above.</div>`;
+  }
+  exercises.forEach(h => {
+    const checked = isCheckDone(d, h.id);
+    const item = document.createElement('div');
+    const editing = editingExerciseId === h.id;
+    item.className = 'habit-item editable-row' + (checked ? ' done' : '') + (editing ? ' editing' : '');
+    const exBuf = editing && pendingExerciseEdit?.ds === selectedDate
+      ? pendingExerciseEdit.items.find(i => i.id === h.id) : null;
+    const eh = exBuf || h;
+    item.innerHTML = editing ? `
+      <div class="habit-check">${checked ? '✓' : ''}</div>
+      <div class="exercise-editor">
+        <input type="text" value="${escapeAttr(eh.text || '')}" aria-label="Exercise title" onclick="event.stopPropagation()" oninput="updateExercise('${h.id}','text',this.value)">
+        <input type="text" value="${escapeAttr(eh.meta || '')}" aria-label="Exercise note" onclick="event.stopPropagation()" oninput="updateExercise('${h.id}','meta',this.value)">
+        <input type="text" value="${escapeAttr(eh.tag || '')}" aria-label="Exercise tag" onclick="event.stopPropagation()" oninput="updateExercise('${h.id}','tag',this.value)">
+        <button class="btn sm" onclick="event.stopPropagation(); confirmExerciseEdit('${h.id}')">Done</button>
+        <button class="btn sm danger" onclick="event.stopPropagation(); removeExercise('${h.id}', this)">×</button>
+      </div>` : `
+      <div class="habit-check">${checked ? '✓' : ''}</div>
+      <div style="flex:1; min-width:0">
+        <div class="habit-text">${escapeAttr(h.text || '')}</div>
+        ${h.meta || h.tag ? `<div class="habit-meta">${[h.tag, h.meta].filter(Boolean).join(' · ')}</div>` : ''}
+      </div>
+      <button class="remove-btn" onclick="event.stopPropagation(); removeExercise('${h.id}', this)">×</button>`;
+    
+    if (!editing) {
+      item.onclick = () => { toggle(selectedDate, h.id); };
+      item.ondblclick = event => {
+        event.stopPropagation();
+        editingExerciseId = h.id;
+        renderDaily();
+      };
+    }
+    el.appendChild(item);
   });
-  item.ondblclick = event => {
-    event.stopPropagation();
-    editingExercise = true;
-    renderDaily();
-  };
-  el.appendChild(item);
 }
 
 function renderSundayList(d) {
@@ -2482,14 +2406,21 @@ function computeWeeklyData(ref) {
     const difficulty = defaultDifficultyForDow(dow);
     const targetHours = (dow === 0 || dow === 6) ? 0 : ((TARGETS[difficulty] || TARGETS.hard).targetHours || 0);
     const comp = getDayCompletion(ds);
-    const exercise = getExercise(dow);
-    const exKey = exercise?.id;
+    const exercises = getExercises(ds);
+    const nonNegs = getNonNegs(ds, difficulty);
+    
+    const isDone = (list, matcher) => list.some(item => matcher(item) && isCheckDone(d, item.id));
+    const nnMatch = (tag, text) => isDone(nonNegs, item => 
+      (tag && item.tag && item.tag.toLowerCase().includes(tag)) || 
+      (text && item.text && item.text.toLowerCase().includes(text))
+    );
+
     const hours = getLoggedHours(ds);
     const sleep = d.sleepHours !== null && d.sleepHours !== undefined && d.sleepHours !== '' ? +d.sleepHours : null;
     const energy = d.energy !== null && d.energy !== undefined && d.energy !== '' ? +d.energy : null;
     const oaDone = hasCompletedOA(ds);
     const row = {
-      ds, d, dow, difficulty, targetHours, comp, exercise, exKey, hours,
+      ds, d, dow, difficulty, targetHours, comp, exercises, hours,
       sleep, energy, completion: comp ? Math.round(comp.pct * 100) : 0,
       practice: +(d.practiceReps || 0),
       project: +(d.projectReps || 0),
@@ -2497,13 +2428,13 @@ function computeWeeklyData(ref) {
       focus: d.focusScore || null,
       oaDone,
       contest: hasCompletedContest(ds),
-      exerciseDone: !!(exKey && isCheckDone(d, exKey)),
-      amSkin: isCheckDone(d, 'nn_am_skin'),
-      pmSkin: isCheckDone(d, 'nn_pm_skin'),
-      focusDone: isCheckDone(d, 'nn_focus_rep'),
-      light: isCheckDone(d, 'nn_light'),
-      review: isCheckDone(d, 'nn_review'),
-      screen: isCheckDone(d, 'nn_screen'),
+      exerciseDone: exercises.some(ex => isCheckDone(d, ex.id)),
+      amSkin: nnMatch('skin', 'am skin') || isCheckDone(d, 'nn_am_skin'),
+      pmSkin: nnMatch('skin', 'pm skin') || isCheckDone(d, 'nn_pm_skin'),
+      focusDone: nnMatch('focus', 'focus rep') || isCheckDone(d, 'nn_focus_rep'),
+      light: nnMatch('light', 'light') || isCheckDone(d, 'nn_light'),
+      review: nnMatch('review', 'review') || isCheckDone(d, 'nn_review'),
+      screen: nnMatch('screen', 'screen') || isCheckDone(d, 'nn_screen'),
       sundayDone: dow === 0 && SUNDAY_PROTOCOL.every(h => isCheckDone(d, h.id)),
       isToday: ds === today,
     };
@@ -2523,7 +2454,7 @@ function computeWeeklyData(ref) {
     acc.sleepN += day.sleep !== null ? 1 : 0;
     acc.energy += day.energy !== null ? day.energy : 0;
     acc.energyN += day.energy !== null ? 1 : 0;
-    acc.z2 += day.exerciseDone && day.exercise?.text.includes('Zone 2') ? 1 : 0;
+    acc.z2 += day.exercises.some(ex => ex.text.toLowerCase().includes('zone 2') && isCheckDone(day.d, ex.id)) ? 1 : 0;
     acc.strength += day.exerciseDone && (day.dow === 1 || day.dow === 4) ? 1 : 0;
     acc.skAM += day.amSkin ? 1 : 0;
     acc.skPM += day.pmSkin ? 1 : 0;
@@ -3038,13 +2969,14 @@ function exportCSV() {
     const d   = getDay(ds);
     const dow = parseDateKey(ds).getDay();
     const comp = getDayCompletion(ds);
-    const exKey = getExercise(dow)?.id;
+    const exercises = getExercises(ds);
+    const exValue = exercises.map(ex => `${ex.text}${isCheckDone(d, ex.id) ? '✓' : '✗'}`).join('; ');
     rows.push([
       ds, DAY_FULL[dow],
       d.sleepHours||'', d.lightsOut||'', d.energy||'',
       formatHours(getLoggedHours(ds)), d.mood||'', d.distractions||'', d.focusScore||'',
       d.practiceReps||0, d.projectReps||0, d.deepWorkReps||0,
-      exKey&&isCheckDone(d, exKey)?'Y':'N',
+      exValue || '—',
       isCheckDone(d, 'nn_am_skin')?'Y':'N', isCheckDone(d, 'nn_pm_skin')?'Y':'N',
       comp ? Math.round(comp.pct*100)+'%' : '',
       (d.insight||'').replace(/,/g,' '),
@@ -3089,7 +3021,7 @@ function resetAll() {
   state = {
     phase:1, days:{}, metrics:{scoreHistory:[],focusPeaks:[]}, errorLog:[], startDate:todayStr(),
     customNonNegs:[], removedNonNegs:[], nonNegOverrides:{}, nonNegTemplates:[],
-    customTraining:{}, removedTraining:{}, trainingTemplates:{}, exerciseOverrides:{},
+    customTraining:{}, removedTraining:{}, trainingTemplates:{},
     timerSettings:{ pomodoroMs:25 * 60 * 1000, breakMs:5 * 60 * 1000 },
     numberLabels:{},
     customBenchmarks: DEFAULT_BENCHMARKS.map(item => ({ ...item })),
