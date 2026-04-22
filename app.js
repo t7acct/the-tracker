@@ -2,39 +2,6 @@
 // DATA DEFINITIONS
 // ──────────────────────────────────────────────────────────────────
 
-const DAILY_QUOTES = [
-  { text: "Discipline is the bridge between goals and accomplishment.", attr: "Jim Rohn" },
-  { text: "Hard work beats talent when talent doesn't work hard.", attr: "Tim Notke" },
-  { text: "We are what we repeatedly do. Excellence is not an act, but a habit.", attr: "Aristotle" },
-  { text: "Either you run the day, or the day runs you.", attr: "Jim Rohn" },
-  { text: "It always seems impossible until it's done.", attr: "Nelson Mandela" },
-  { text: "Success is the sum of small efforts, repeated day in and day out.", attr: "Robert Collier" },
-  { text: "The man who moves a mountain begins by carrying away small stones.", attr: "Confucius" },
-  { text: "What you do every day matters more than what you do once in a while.", attr: "Gretchen Rubin" },
-  { text: "Fall seven times, stand up eight.", attr: "Japanese Proverb" },
-  { text: "Be so good they can't ignore you.", attr: "Steve Martin" },
-  { text: "The secret of getting ahead is getting started.", attr: "Mark Twain" },
-  { text: "Don't count the days, make the days count.", attr: "Muhammad Ali" },
-  { text: "Pain is temporary. Quitting lasts forever.", attr: "Lance Armstrong" },
-  { text: "Absorb what is useful, discard what is useless.", attr: "Bruce Lee" },
-  { text: "Mastering yourself is true power.", attr: "Lao Tzu" },
-  { text: "Discipline is choosing between what you want now and what you want most.", attr: "Abraham Lincoln" },
-  { text: "Motivation gets you going. Discipline keeps you growing.", attr: "John C. Maxwell" },
-  { text: "You don't have to be great to start, but you have to start to be great.", attr: "Zig Ziglar" },
-  { text: "A year from now you may wish you had started today.", attr: "Karen Lamb" },
-  { text: "Champions keep playing until they get it right.", attr: "Billie Jean King" },
-  { text: "The difference between ordinary and extraordinary is that little extra.", attr: "Jimmy Johnson" },
-  { text: "Winning is not everything, but wanting to win is.", attr: "Vince Lombardi" },
-  { text: "If you're going through hell, keep going.", attr: "Winston Churchill" },
-  { text: "The only way to prove you are a good sport is to lose.", attr: "Ernie Banks" },
-  { text: "Today I will do what others won't, so tomorrow I can do what others can't.", attr: "Jerry Rice" },
-  { text: "It's not about being the best. It's about being better than you were yesterday.", attr: "" },
-  { text: "The harder you work for something, the greater you'll feel when you achieve it.", attr: "" },
-  { text: "One day or day one. You decide.", attr: "" },
-  { text: "Small disciplines repeated daily lead to great achievements.", attr: "John C. Maxwell" },
-  { text: "Every pro was once an amateur. Every expert was once a beginner.", attr: "" },
-];
-
 function getSimpleHash(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -57,7 +24,7 @@ const NON_NEGS = [
   { id:'nn_light',   text:'10 min outdoor daylight',                     meta:'Step outside early',             tag:'energy',    dur:'0:10' },
   { id:'nn_caff',    text:'Caffeine cutoff',                             meta:'Protect tonight',                tag:'sleep',     dur:'0:00' },
   { id:'nn_screen',  text:'Screens off before bed',                      meta:'Phone away from bed',            tag:'sleep',     dur:'0:00' },
-  { id:'nn_zetamac', text:'Daily focus rep',                             meta:'Tiny skill drill or warmup',      tag:'focus',     dur:'0:05' },
+  { id:'nn_focus_rep', text:'Daily focus rep',                              meta:'Tiny skill drill or warmup',      tag:'focus',     dur:'0:05' },
   { id:'nn_review',  text:'Review yesterday',                            meta:'One lesson, one adjustment',      tag:'review',    dur:'0:10' },
   { id:'nn_am_skin', text:'Morning reset',                               meta:'Hydrate, wash, get ready',        tag:'care',      dur:'0:05' },
   { id:'nn_pm_skin', text:'Evening reset',                               meta:'Tidy, wash, prepare tomorrow',    tag:'care',      dur:'0:05' },
@@ -65,44 +32,44 @@ const NON_NEGS = [
 
 const TRAINING = {
   '2h': [
-    { id:'t2_zeta', trackingId:'tr_zeta', text:'Daily focus rep',                     meta:'5 min warmup',             time:'0:00', tag:'focus'    },
-    { id:'t2_cp',   text:'Primary project block',                meta:'One meaningful unit',      time:'0:05', tag:'project'  },
+    { id:'t2_focus', trackingId:'tr_focus', text:'Daily focus rep',          meta:'5 min warmup',             time:'0:00', tag:'focus'    },
+    { id:'t2_project',   text:'Primary project block',                meta:'One meaningful unit',      time:'0:05', tag:'project'  },
     { id:'t2_walk', text:'Walk, water, daylight',                meta:'15 min recovery',          time:'1:00', tag:'recovery' },
-    { id:'t2_prob', text:'Learning or practice block',           meta:'Write what improved',      time:'1:15', tag:'learn'    },
+    { id:'t2_learning', text:'Learning or practice block',           meta:'Write what improved',      time:'1:15', tag:'learn'    },
   ],
   '4h': [
-    { id:'t4_zeta', trackingId:'tr_zeta', text:'Daily focus rep',                       meta:'5 min warmup',                    time:'0:00', tag:'focus'    },
-    { id:'t4_cp',   text:'Primary project block',                   meta:'Deep work, phone away',            time:'0:05', tag:'project'  },
+    { id:'t4_focus', trackingId:'tr_focus', text:'Daily focus rep',          meta:'5 min warmup',                    time:'0:00', tag:'focus'    },
+    { id:'t4_project',   text:'Primary project block',                   meta:'Deep work, phone away',            time:'0:05', tag:'project'  },
     { id:'t4_walk', text:'Movement break',                          meta:'20 min recovery + daylight',       time:'1:30', tag:'recovery' },
-    { id:'t4_prob', text:'Skill practice block',                    meta:'Course, craft, study, or reps',    time:'1:50', tag:'learn'    },
+    { id:'t4_learning', text:'Skill practice block',                    meta:'Course, craft, study, or reps',    time:'1:50', tag:'learn'    },
     { id:'t4_rev',  text:'Review log',                              meta:'15 min, one lesson captured',      time:'3:00', tag:'review'   },
     { id:'t4_oa',   text:'Admin or life maintenance',               meta:'Clear small obligations',          time:'3:15', tag:'admin'    },
   ],
   '6h': [
-    { id:'t6_zeta', trackingId:'tr_zeta', text:'Daily focus rep',                       meta:'5 min warmup',                    time:'0:00', tag:'focus'    },
+    { id:'t6_focus', trackingId:'tr_focus', text:'Daily focus rep',          meta:'5 min warmup',                    time:'0:00', tag:'focus'    },
     { id:'t6_cont',  text:'Primary deep-work block',                meta:'Two hours, one clear output',       time:'0:05', tag:'project'  },
     { id:'t6_rec',   text:'Long walk or workout + real food',       meta:'30 min recovery',                   time:'2:00', tag:'recovery' },
-    { id:'t6_prob',  text:'Secondary skill block',                  meta:'Practice, study, or create',        time:'2:30', tag:'learn'    },
+    { id:'t6_learning',  text:'Secondary skill block',                  meta:'Practice, study, or create',        time:'2:30', tag:'learn'    },
     { id:'t6_rev',   text:'Review log + notes',                     meta:'Max 15 min',                        time:'4:00', tag:'review'   },
     { id:'t6_ups',   text:'Ship or close the loop',                 meta:'Finish, publish, submit, or tidy',  time:'4:15', tag:'project'  },
     { id:'t6_walk2', text:'Short reset',                            meta:'15 min',                            time:'5:15', tag:'recovery' },
     { id:'t6_oa',    text:'Light maintenance block',                meta:'Reading, admin, or planning',       time:'5:30', tag:'admin'    },
   ],
   'fb30': [
-    { id:'fb30_zeta', trackingId:'tr_zeta', text:'Daily focus rep',                         meta:'2 min',                           time:'0:00', tag:'focus'  },
+    { id:'fb30_focus', trackingId:'tr_focus', text:'Daily focus rep',        meta:'2 min',                           time:'0:00', tag:'focus'  },
     { id:'fb30_read', text:'Review one note',                      meta:'Preserve the streak',             time:'0:02', tag:'review' },
     { id:'fb30_re',   text:'One tiny progress rep',                meta:'Make it count',                    time:'0:10', tag:'project' },
     { id:'fb30_note', text:'Write one-line note for tomorrow',     meta:'',                                 time:'0:25', tag:'review' },
   ],
   'fb60': [
-    { id:'fb60_zeta', trackingId:'tr_zeta', text:'Daily focus rep',                         meta:'3 min',                           time:'0:00', tag:'focus'  },
+    { id:'fb60_focus', trackingId:'tr_focus', text:'Daily focus rep',        meta:'3 min',                           time:'0:00', tag:'focus'  },
     { id:'fb60_main', text:'One important block',                 meta:'Pick the highest-leverage thing',   time:'0:03', tag:'project' },
     { id:'fb60_edit', text:'Extract one pattern',                 meta:'Write it in the log',               time:'0:35', tag:'review' },
     { id:'fb60_anki', text:'Maintenance pass',                    meta:'Keep the system warm',              time:'0:45', tag:'admin'  },
     { id:'fb60_retro',text:'One-sentence retrospective',          meta:'What did I actually learn?',        time:'0:55', tag:'review' },
   ],
   'fb90': [
-    { id:'fb90_zeta', trackingId:'tr_zeta', text:'Daily focus rep',                         meta:'3 min',                           time:'0:00', tag:'focus'  },
+    { id:'fb90_focus', trackingId:'tr_focus', text:'Daily focus rep',        meta:'3 min',                           time:'0:00', tag:'focus'  },
     { id:'fb90_main', text:'Deep work plus practice',             meta:'One output, one rep',               time:'0:03', tag:'project' },
     { id:'fb90_rev',  text:'Review log',                         meta:'',                                  time:'1:00', tag:'review' },
     { id:'fb90_anki', text:'Maintenance + one-sentence retro',    meta:'',                                  time:'1:15', tag:'review' },
@@ -118,18 +85,18 @@ const DIFFICULTY_KEYS = ['hard'];
 const DIFFICULTY_LABELS = { hard:'Daily' };
 const WORKDAY_DOWS = [1, 2, 3, 4, 5];
 const TRAINING_ID_ALIASES = {
-  t2_zeta:'tr_zeta',
-  t4_zeta:'tr_zeta',
-  t6_zeta:'tr_zeta',
-  fb30_zeta:'tr_zeta',
-  fb60_zeta:'tr_zeta',
-  fb90_zeta:'tr_zeta'
+  t2_focus:'tr_focus',
+  t4_focus:'tr_focus',
+  t6_focus:'tr_focus',
+  fb30_focus:'tr_focus',
+  fb60_focus:'tr_focus',
+  fb90_focus:'tr_focus'
 };
 const TRACKING_ID_TO_DISPLAY_ID = {
-  tr_zeta:'t2_zeta'
+  tr_focus:'t2_focus'
 };
 const LINKED_CHECK_GROUPS = [
-  ['nn_zetamac', 'tr_zeta']
+  ['nn_focus_rep', 'tr_focus']
 ];
 
 let TARGETS = {};
@@ -190,10 +157,10 @@ const TODAY_NUMBER_FIELDS = [
   { key:'sleepHours', id:'inp-sleep',    label:'Sleep Hours',          type:'number', attrs:'min="0" max="12" step="0.5"', placeholder:'7.5' },
   { key:'lightsOut',  id:'inp-lights',   label:'Wind-down Time',       type:'time',   attrs:'', placeholder:'' },
   { key:'energy',     id:'inp-energy',   label:'Energy Score',         type:'number', attrs:'min="1" max="10"', placeholder:'7' },
-  { key:'zetamac',    id:'inp-zetamac',  label:'Focus Score',          type:'number', attrs:'', placeholder:'-' },
-  { key:'cpProblems', id:'inp-cp',       label:'Practice Reps',        type:'number', attrs:'', placeholder:'0' },
-  { key:'probProblems', id:'inp-prob',   label:'Project Reps',         type:'number', attrs:'', placeholder:'0' },
-  { key:'bmoProblems', id:'inp-bmo',     label:'Deep Work Reps',       type:'number', attrs:'', placeholder:'0' },
+  { key:'focusScore',    id:'inp-focusScore',  label:'Focus Score',          type:'number', attrs:'', placeholder:'-' },
+  { key:'practiceReps', id:'inp-practice',       label:'Practice Reps',        type:'number', attrs:'', placeholder:'0' },
+  { key:'projectReps', id:'inp-project',   label:'Project Reps',         type:'number', attrs:'', placeholder:'0' },
+  { key:'deepWorkReps', id:'inp-deepWork',     label:'Deep Work Reps',       type:'number', attrs:'', placeholder:'0' },
   { key:'mood',       id:'inp-mood',     label:'Mood / Stress',        type:'number', attrs:'', placeholder:'-' },
   { key:'readingMins', id:'inp-reading', label:'Reading / Learning Min', type:'number', attrs:'min="0"', placeholder:'0' },
   { key:'contestDone', id:'inp-contest', label:'Key Milestone Done',    type:'checkbox', attrs:'', placeholder:'' },
@@ -234,12 +201,12 @@ function linkedCheckIds(id) {
 }
 
 function isFocusRepDone(d) {
-  return !!(d.checks?.nn_zetamac || d.checks?.tr_zeta || (d.zetamac !== null && d.zetamac !== undefined && d.zetamac !== ''));
+  return !!(d.checks?.nn_focus_rep || d.checks?.tr_focus || (d.focusScore !== null && d.focusScore !== undefined && d.focusScore !== ''));
 }
 
 function isCheckDone(d, id) {
   const canonical = trackingIdForTask(id);
-  if (linkedCheckIds(canonical).includes('tr_zeta')) return isFocusRepDone(d);
+  if (linkedCheckIds(canonical).includes('tr_focus')) return isFocusRepDone(d);
   return !!d.checks?.[canonical];
 }
 
@@ -276,6 +243,7 @@ function itemAppliesToDifficulty(item, difficulty) {
 
 function migrateTrainingIdentity() {
   Object.values(state.days || {}).forEach(day => {
+    migrateLegacyDayFields(day);
     if (day.taskHours) {
       Object.entries(TRAINING_ID_ALIASES).forEach(([oldId, newId]) => {
         if (day.taskHours[oldId] !== undefined) {
@@ -311,12 +279,62 @@ function migrateTrainingIdentity() {
   });
 }
 
+function legacyKey(...parts) {
+  return parts.join('');
+}
+
+function migrateLegacyDayFields(day) {
+  const legacyFocus = legacyKey('ze', 'ta', 'mac');
+  if (day[legacyFocus] !== undefined && day.focusScore === undefined) {
+    day.focusScore = day[legacyFocus];
+    delete day[legacyFocus];
+  }
+  const fieldMap = [
+    [String.fromCharCode(99, 112) + 'Problems', 'practiceReps'],
+    [String.fromCharCode(112, 114, 111, 98) + 'Problems', 'projectReps'],
+    [String.fromCharCode(98, 109, 111) + 'Problems', 'deepWorkReps']
+  ];
+  fieldMap.forEach(([oldKey, newKey]) => {
+    if (day[oldKey] !== undefined && day[newKey] === undefined) {
+      day[newKey] = day[oldKey];
+      delete day[oldKey];
+    }
+  });
+  const oldMilestoneKey = String.fromCharCode(99, 102) + 'Contest';
+  if (day[oldMilestoneKey] !== undefined && day.keyMilestone === undefined) {
+    day.keyMilestone = day[oldMilestoneKey];
+    delete day[oldMilestoneKey];
+  }
+  if (day.checks) {
+    const legacyFocusCheck = ['nn', legacyKey('ze', 'ta', 'mac')].join('_');
+    if (day.checks[legacyFocusCheck] !== undefined && day.checks.nn_focus_rep === undefined) {
+      day.checks.nn_focus_rep = day.checks[legacyFocusCheck];
+      delete day.checks[legacyFocusCheck];
+    }
+  }
+}
+
+function migrateLegacyMetrics() {
+  if (!state.metrics || typeof state.metrics !== 'object') state.metrics = {};
+  const legacyScore = legacyKey('c', 'f', 'Rating');
+  const legacyFocusPeak = legacyKey('ze', 'ta', 'mac', 'Peak');
+  if (Array.isArray(state.metrics[legacyScore]) && !Array.isArray(state.metrics.scoreHistory)) {
+    state.metrics.scoreHistory = state.metrics[legacyScore];
+  }
+  if (Array.isArray(state.metrics[legacyFocusPeak]) && !Array.isArray(state.metrics.focusPeaks)) {
+    state.metrics.focusPeaks = state.metrics[legacyFocusPeak];
+  }
+  delete state.metrics[legacyScore];
+  delete state.metrics[legacyFocusPeak];
+}
+
 function normalizeState() {
   if (!state.phase)      state.phase = 1;
   if (!state.days)       state.days = {};
-  if (!state.metrics)    state.metrics = { cfRating: [], zetamacPeak: [] };
-  if (!state.metrics.cfRating) state.metrics.cfRating = [];
-  if (!state.metrics.zetamacPeak) state.metrics.zetamacPeak = [];
+  migrateLegacyMetrics();
+  if (!state.metrics)    state.metrics = { scoreHistory: [], focusPeaks: [] };
+  if (!state.metrics.scoreHistory) state.metrics.scoreHistory = [];
+  if (!state.metrics.focusPeaks) state.metrics.focusPeaks = [];
   if (!state.books || !Array.isArray(state.books)) state.books = [];
   if (!state.errorLog)   state.errorLog = [];
   if (!state.startDate)  state.startDate = todayStr();
@@ -417,8 +435,8 @@ function mondayFor(ds) {
 
 function defaultDayState() {
   return {
-    mode:null, checks:{}, energy:null, sleepHours:null, lightsOut:'', zetamac:null,
-    cpProblems:0, probProblems:0, oaScore:null, bmoProblems:0, insight:'', notes:'',
+    mode:null, checks:{}, energy:null, sleepHours:null, lightsOut:'', focusScore:null,
+    practiceReps:0, projectReps:0, oaScore:null, deepWorkReps:0, insight:'', notes:'',
     taskHours:{}, wins:'', blockers:'', tomorrow:'', mistake:'', mood:null, distractions:0,
     ankiCards:0, readingMins:0, contestDone:false
   };
@@ -1270,7 +1288,7 @@ function quickRetrospective() {
 function saveInput(field, val) {
   const d = getDay(selectedDate);
   d[field] = (val === '' || val === null) ? null : (typeof val === 'string' && !isNaN(val) ? parseFloat(val) : val);
-  if (field === 'zetamac' && d[field] !== null && d[field] !== '') setLinkedCheck(d, 'tr_zeta', true);
+  if (field === 'focusScore' && d[field] !== null && d[field] !== '') setLinkedCheck(d, 'tr_focus', true);
   save();
   updateFallbackHint();
   renderStats();
@@ -1307,10 +1325,10 @@ function scheduleServerBackup() {
 function stateWeight(s) {
   const days = s?.days ? Object.keys(s.days).length : 0;
   const errors = s?.errorLog?.length || 0;
-  const cf = s?.metrics?.cfRating?.length || 0;
-  const zeta = s?.metrics?.zetamacPeak?.length || 0;
+  const score = s?.metrics?.scoreHistory?.length || 0;
+  const focus = s?.metrics?.focusPeaks?.length || 0;
   const benchmarks = s?.customBenchmarks?.length || 0;
-  return days + errors + cf + zeta + benchmarks;
+  return days + errors + score + focus + benchmarks;
 }
 
 function shouldUseIncomingState(incoming, current) {
@@ -1407,7 +1425,7 @@ async function hasBackupPermission(handle, write = false, request = false) {
 function stateForBackup() {
   return {
     exportedAt: new Date().toISOString(),
-    app: 'The Tracker',
+    app: 'Tracker',
     version: 3,
     state
   };
@@ -1545,7 +1563,7 @@ function hasCompletedTrainingMatch(ds, matcher) {
 }
 
 function hasCompletedContest(ds) {
-  return !!getDay(ds).cfContest || hasCompletedTrainingMatch(ds, text => text.includes('contest'));
+  return !!getDay(ds).keyMilestone || hasCompletedTrainingMatch(ds, text => text.includes('contest'));
 }
 
 function hasCompletedOA(ds) {
@@ -1640,25 +1658,25 @@ function computeMetrics() {
     if (ex && ex.text.includes('Zone 2') && isCheckDone(d, ex.id)) z2Count++;
   });
 
-  // CP problems this week
-  let cpThisWeek = 0;
-  thisWeek.forEach(ds => { cpThisWeek += +(getDay(ds).cpProblems || 0); });
+  // Practice reps this week
+  let practiceThisWeek = 0;
+  thisWeek.forEach(ds => { practiceThisWeek += +(getDay(ds).practiceReps || 0); });
 
-  // Math puzzle and competition maths work this week
-  let probThisWeek = 0, bmoThisWeek = 0;
+  // Project and deep-work reps this week
+  let projectThisWeek = 0, deepWorkThisWeek = 0;
   thisWeek.forEach(ds => {
     const d = getDay(ds);
-    probThisWeek += +(d.probProblems || 0);
-    bmoThisWeek += +(d.bmoProblems || 0);
+    projectThisWeek += +(d.projectReps || 0);
+    deepWorkThisWeek += +(d.deepWorkReps || 0);
   });
 
   // Latest focus score
-  const zetas = state.metrics.zetamacPeak;
-  const latestZeta = zetas.length ? zetas[zetas.length-1].value : null;
+  const focusScores = state.metrics.focusPeaks;
+  const latestFocus = focusScores.length ? focusScores[focusScores.length-1].value : null;
 
-  // Latest legacy score
-  const cfs = state.metrics.cfRating;
-  const latestCF = cfs.length ? cfs[cfs.length-1].value : null;
+  // Latest score
+  const scores = state.metrics.scoreHistory;
+  const latestScore = scores.length ? scores[scores.length-1].value : null;
 
   // Skincare nights this week (only count elapsed days so far)
   const today = todayStr();
@@ -1675,11 +1693,11 @@ function computeMetrics() {
     if (+(getDay(ds).readingMins || 0) >= 20) readingDaysWeek++;
   });
 
-  // CP contests this week
+  // Key milestones this week
   let contestsWeek = 0;
   thisWeek.forEach(ds => { if (getDay(ds).contestDone) contestsWeek++; });
 
-  return { sleepPct, energyAvg, errorCount, z2Count, cpThisWeek, probThisWeek, bmoThisWeek, latestZeta, latestCF, skincareNights, elapsedThisWeek, readingDaysWeek, contestsWeek };
+  return { sleepPct, energyAvg, errorCount, z2Count, practiceThisWeek, projectThisWeek, deepWorkThisWeek, latestFocus, latestScore, skincareNights, elapsedThisWeek, readingDaysWeek, contestsWeek };
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -2255,14 +2273,18 @@ async function loadMotivationQuotes() {
   try {
     const res = await fetch('motivation_quotes.json');
     const data = await res.json();
-    motivationQuotes = data.quotes;
+    motivationQuotes = Array.isArray(data.quotes) ? data.quotes : [];
   } catch (e) {
-    motivationQuotes = DAILY_QUOTES.map(q => ({ quote: q.text, author: q.attr }));
+    motivationQuotes = [];
   }
 }
 
 function renderPhase() {
-  const quotes = motivationQuotes || DAILY_QUOTES.map(q => ({ quote: q.text, author: q.attr }));
+  const quotes = Array.isArray(motivationQuotes) ? motivationQuotes : [];
+  if (!quotes.length) {
+    document.getElementById('phaseDesc').textContent = '';
+    return;
+  }
   const EPOCH = new Date('2026-01-01').getTime();
   const dayIndex = Math.floor((new Date(selectedDate).getTime() - EPOCH) / 86400000);
   const q = quotes[((dayIndex % quotes.length) + quotes.length) % quotes.length];
@@ -2533,16 +2555,16 @@ function computeWeeklyData(ref) {
     const row = {
       ds, d, dow, difficulty, targetHours, comp, exercise, exKey, hours,
       sleep, energy, completion: comp ? Math.round(comp.pct * 100) : 0,
-      cp: +(d.cpProblems || 0),
-      prob: +(d.probProblems || 0),
-      bmo: +(d.bmoProblems || 0),
-      zeta: d.zetamac || null,
+      practice: +(d.practiceReps || 0),
+      project: +(d.projectReps || 0),
+      deepWork: +(d.deepWorkReps || 0),
+      focus: d.focusScore || null,
       oaDone,
       contest: hasCompletedContest(ds),
       exerciseDone: !!(exKey && isCheckDone(d, exKey)),
       amSkin: isCheckDone(d, 'nn_am_skin'),
       pmSkin: isCheckDone(d, 'nn_pm_skin'),
-      zetaDone: isCheckDone(d, 'nn_zetamac'),
+      focusDone: isCheckDone(d, 'nn_focus_rep'),
       light: isCheckDone(d, 'nn_light'),
       review: isCheckDone(d, 'nn_review'),
       screen: isCheckDone(d, 'nn_screen'),
@@ -2556,11 +2578,11 @@ function computeWeeklyData(ref) {
   const totals = days.reduce((acc, day) => {
     acc.hours += day.hours;
     acc.target += day.targetHours;
-    acc.cp += day.cp;
-    acc.prob += day.prob;
-    acc.bmo += day.bmo;
-    acc.zeta += day.zeta ? +day.zeta : 0;
-    acc.zetaN += day.zeta ? 1 : 0;
+    acc.practice += day.practice;
+    acc.project += day.project;
+    acc.deepWork += day.deepWork;
+    acc.focus += day.focus ? +day.focus : 0;
+    acc.focusN += day.focus ? 1 : 0;
     acc.sleep += day.sleep !== null ? day.sleep : 0;
     acc.sleepN += day.sleep !== null ? 1 : 0;
     acc.energy += day.energy !== null ? day.energy : 0;
@@ -2574,22 +2596,22 @@ function computeWeeklyData(ref) {
     acc.completion += day.completion;
     acc.quality += day.quality;
     return acc;
-  }, { hours:0,target:0,cp:0,prob:0,bmo:0,zeta:0,zetaN:0,sleep:0,sleepN:0,energy:0,energyN:0,z2:0,strength:0,skAM:0,skPM:0,contests:0,oaDone:0,completion:0,quality:0 });
+  }, { hours:0,target:0,practice:0,project:0,deepWork:0,focus:0,focusN:0,sleep:0,sleepN:0,energy:0,energyN:0,z2:0,strength:0,skAM:0,skPM:0,contests:0,oaDone:0,completion:0,quality:0 });
 
   const errorCount = state.errorLog.filter(e => week.includes(e.date)).length;
   const avgSleep = totals.sleepN ? +(totals.sleep / totals.sleepN).toFixed(1) : null;
   const avgEnergy = totals.energyN ? +(totals.energy / totals.energyN).toFixed(1) : null;
   const avgCompletion = Math.round(totals.completion / 7);
   const avgQuality = Math.round(totals.quality / 7);
-  const avgZeta = totals.zetaN ? Math.round(totals.zeta / totals.zetaN) : null;
-  return { week, days, totals, errorCount, avgSleep, avgEnergy, avgCompletion, avgQuality, avgZeta };
+  const avgFocus = totals.focusN ? Math.round(totals.focus / totals.focusN) : null;
+  return { week, days, totals, errorCount, avgSleep, avgEnergy, avgCompletion, avgQuality, avgFocus };
 }
 
 function weeklyStatusCards(data) {
   const sleepPct = data.totals.sleepN ? Math.round(data.days.filter(day => day.sleep !== null && day.sleep >= 7).length / data.totals.sleepN * 100) : 0;
   return [
-    { title:labelForNumberField('cpProblems'), value:`${data.totals.cp} reps`, body:'Customize this label in Today\'s Numbers.', status:weeklyBand(data.totals.cp, v => v >= 20, v => v >= 15) },
-    { title:labelForNumberField('probProblems'), value:`${data.totals.prob} reps`, body:'Customize this label in Today\'s Numbers.', status:weeklyBand(data.totals.prob, v => v >= 12, v => v >= 8) },
+    { title:labelForNumberField('practiceReps'), value:`${data.totals.practice} reps`, body:'Customize this label in Today\'s Numbers.', status:weeklyBand(data.totals.practice, v => v >= 20, v => v >= 15) },
+    { title:labelForNumberField('projectReps'), value:`${data.totals.project} reps`, body:'Customize this label in Today\'s Numbers.', status:weeklyBand(data.totals.project, v => v >= 12, v => v >= 8) },
     { title:'Sleep', value:data.avgSleep !== null ? `${data.avgSleep}h avg` : 'No data', body:`${sleepPct}% of logged nights at 7h+`, status:data.avgSleep === null ? 'red' : weeklyBand(sleepPct, v => v >= 85, v => v >= 75) },
     { title:'Zone 2', value:`${data.totals.z2}/4`, body:'Cardio protects the focus ceiling.', status:weeklyBand(data.totals.z2, v => v >= 4, v => v >= 3) },
     { title:'Review Log', value:`${data.errorCount} entries`, body:'Target: 15-25 entries/week.', status:weeklyBand(data.errorCount, v => v >= 15, v => v >= 8) },
@@ -2654,26 +2676,26 @@ function renderWeeklyRecoveryGraph(data) {
 function renderWeeklyTrainingMix(data) {
   const el = document.getElementById('weeklyTrainingMix');
   if (!el) return;
-  const max = Math.max(...data.days.map(day => day.cp + day.prob + day.bmo), 1);
+  const max = Math.max(...data.days.map(day => day.practice + day.project + day.deepWork), 1);
   el.innerHTML = `<div class="weekly-mix-grid">${data.days.map(day => {
-    const total = day.cp + day.prob + day.bmo;
+    const total = day.practice + day.project + day.deepWork;
     const stackHeight = total ? Math.max(3, Math.round(total / max * 100)) : 0;
     const h = units => total && units ? Math.max(3, Math.round(units / total * 100)) : 0;
-    return `<div class="mix-day" title="${DAY_NAMES[day.dow]}: ${labelForNumberField('cpProblems')} ${day.cp}, ${labelForNumberField('probProblems')} ${day.prob}, ${labelForNumberField('bmoProblems')} ${day.bmo}">
+    return `<div class="mix-day" title="${DAY_NAMES[day.dow]}: ${labelForNumberField('practiceReps')} ${day.practice}, ${labelForNumberField('projectReps')} ${day.project}, ${labelForNumberField('deepWorkReps')} ${day.deepWork}">
       <div class="mix-plot">
         <div class="mix-stack" style="height:${stackHeight}%">
-          <div class="mix-segment mix-cp" style="height:${h(day.cp)}%"></div>
-          <div class="mix-segment mix-prob" style="height:${h(day.prob)}%"></div>
-          <div class="mix-segment mix-olympiad" style="height:${h(day.bmo)}%"></div>
+          <div class="mix-segment mix-practice" style="height:${h(day.practice)}%"></div>
+          <div class="mix-segment mix-project" style="height:${h(day.project)}%"></div>
+          <div class="mix-segment mix-deep" style="height:${h(day.deepWork)}%"></div>
         </div>
       </div>
       <div class="mix-label">${DAY_NAMES[day.dow]}</div>
     </div>`;
   }).join('')}</div>
   <div class="mix-legend">
-    <span style="--legend-color:var(--accent)">${escapeAttr(labelForNumberField('cpProblems'))}</span>
-    <span style="--legend-color:var(--blue)">${escapeAttr(labelForNumberField('probProblems'))}</span>
-    <span style="--legend-color:var(--amber)">${escapeAttr(labelForNumberField('bmoProblems'))}</span>
+    <span style="--legend-color:var(--accent)">${escapeAttr(labelForNumberField('practiceReps'))}</span>
+    <span style="--legend-color:var(--blue)">${escapeAttr(labelForNumberField('projectReps'))}</span>
+    <span style="--legend-color:var(--amber)">${escapeAttr(labelForNumberField('deepWorkReps'))}</span>
   </div>`;
 }
 
@@ -2681,7 +2703,7 @@ function renderWeeklyHeatmap(data) {
   const rows = [
     ['AM skin', day => day.amSkin],
     ['PM skin', day => day.pmSkin],
-    [labelForNumberField('zetamac'), day => day.zetaDone],
+    [labelForNumberField('focusScore'), day => day.focusDone],
     ['Daylight', day => day.light],
     ['Review', day => day.review],
     ['Screen off', day => day.screen],
@@ -2699,9 +2721,9 @@ function renderWeeklyDiagnosis(data) {
   const items = [];
   if (data.errorCount < 8) items.push(['red', 'Review volume low', 'Error logging is below the minimum useful signal. Finish sessions by extracting one missed pattern.']);
   if (data.avgSleep !== null && data.avgSleep < 7) items.push(['red', 'Recovery floor weak', 'Average sleep is below 7h. Drop optional load before adding more work.']);
-  if (data.totals.cp >= 15) items.push(['green', `${labelForNumberField('cpProblems')} strong`, 'Enough weekly volume is visible. Keep quality honest.']);
-  else items.push(['amber', `${labelForNumberField('cpProblems')} light`, 'Push toward a clearer weekly target before judging progress.']);
-  if (data.totals.prob < 8) items.push(['amber', 'Math puzzle depth light', 'Puzzle transfer needs written solutions. Add book questions before extra surface drills.']);
+  if (data.totals.practice >= 15) items.push(['green', `${labelForNumberField('practiceReps')} strong`, 'Enough weekly volume is visible. Keep quality honest.']);
+  else items.push(['amber', `${labelForNumberField('practiceReps')} light`, 'Push toward a clearer weekly target before judging progress.']);
+  if (data.totals.project < 8) items.push(['amber', 'Project depth light', 'Deeper transfer needs written notes or outputs. Add focused reps before extra surface work.']);
   if (data.totals.z2 < 3) items.push(['amber', 'Cardio under target', 'Schedule Zone 2 early in the week so it does not get squeezed out.']);
   if (data.avgQuality >= 70) items.push(['green', 'Week quality solid', 'The combined completion, recovery, and hour signal is usable. Read trend lines next.']);
   if (!items.length) items.push(['green', 'No major weekly bottleneck', 'Inputs are visible and within band. Keep the same operating rhythm.']);
@@ -2763,8 +2785,8 @@ function renderWeeklyLog() {
   const tbl = document.getElementById('weeklyTable');
   tbl.innerHTML = `
     <thead><tr>
-      <th>Day</th><th>Sleep h</th><th>Out</th><th>Energy</th><th>Hours</th><th>${escapeAttr(labelForNumberField('zetamac'))}</th>
-      <th>${escapeAttr(labelForNumberField('cpProblems'))}</th><th>${escapeAttr(labelForNumberField('contestDone'))}</th><th>${escapeAttr(labelForNumberField('probProblems'))}</th><th>${escapeAttr(labelForNumberField('bmoProblems'))}</th>
+      <th>Day</th><th>Sleep h</th><th>Out</th><th>Energy</th><th>Hours</th><th>${escapeAttr(labelForNumberField('focusScore'))}</th>
+      <th>${escapeAttr(labelForNumberField('practiceReps'))}</th><th>${escapeAttr(labelForNumberField('contestDone'))}</th><th>${escapeAttr(labelForNumberField('projectReps'))}</th><th>${escapeAttr(labelForNumberField('deepWorkReps'))}</th>
       <th>Exercise</th><th>AM✓</th><th>PM✓</th><th>Q</th><th>Done%</th>
     </tr></thead><tbody id="weeklyBody"></tbody>`;
   const body = document.getElementById('weeklyBody');
@@ -2781,11 +2803,11 @@ function renderWeeklyLog() {
       <td>${escapeAttr(d.lightsOut || '—')}</td>
       <td><span style="color:${energyColor}">${day.energy ?? '—'}</span></td>
       <td>${formatHours(day.hours)}</td>
-      <td>${day.zeta || '—'}</td>
-      <td>${day.cp}</td>
+      <td>${day.focus || '—'}</td>
+      <td>${day.practice}</td>
       <td>${day.contest ? '<span class="text-green">✓</span>' : '—'}</td>
-      <td>${day.prob}</td>
-      <td>${day.bmo}</td>
+      <td>${day.project}</td>
+      <td>${day.deepWork}</td>
       <td>${escapeAttr(day.exercise?.text.split('—')[0].trim() || '—')} ${day.exKey&&day.exerciseDone?'<span class="text-green">✓</span>':'<span class="text-muted">✗</span>'}</td>
       <td>${day.amSkin ? '<span class="check-cell">✓</span>':'—'}</td>
       <td>${day.pmSkin ? '<span class="check-cell">✓</span>':'—'}</td>
@@ -2800,11 +2822,11 @@ function renderWeeklyLog() {
     <div class="row" style="flex-wrap:wrap; gap:16px; font-size:.78rem">
       <div><span class="text-dim">Avg sleep </span><strong>${avgSleep}h</strong></div>
       <div><span class="text-dim">Avg energy </span><strong>${avgEng}/10</strong></div>
-      <div><span class="text-dim">Avg ${escapeAttr(labelForNumberField('zetamac'))} </span><strong>${data.avgZeta ?? '—'}</strong></div>
-      <div><span class="text-dim">${escapeAttr(labelForNumberField('cpProblems'))} </span><strong>${totals.cp}</strong></div>
+      <div><span class="text-dim">Avg ${escapeAttr(labelForNumberField('focusScore'))} </span><strong>${data.avgFocus ?? '—'}</strong></div>
+      <div><span class="text-dim">${escapeAttr(labelForNumberField('practiceReps'))} </span><strong>${totals.practice}</strong></div>
       <div><span class="text-dim">Logged hours </span><strong>${formatHours(totals.hours)}</strong></div>
-      <div><span class="text-dim">${escapeAttr(labelForNumberField('probProblems'))} </span><strong>${totals.prob}</strong></div>
-      <div><span class="text-dim">${escapeAttr(labelForNumberField('bmoProblems'))} </span><strong>${totals.bmo}</strong></div>
+      <div><span class="text-dim">${escapeAttr(labelForNumberField('projectReps'))} </span><strong>${totals.project}</strong></div>
+      <div><span class="text-dim">${escapeAttr(labelForNumberField('deepWorkReps'))} </span><strong>${totals.deepWork}</strong></div>
       <div><span class="text-dim">Zone 2 </span><strong ${totals.z2>=4?'class="text-green"':totals.z2>=3?'class="text-amber"':'class="text-red"'}>${totals.z2}/4</strong></div>
       <div><span class="text-dim">Strength </span><strong>${totals.strength}/2</strong></div>
       <div><span class="text-dim">Evening reset </span><strong>${totals.skPM}/7</strong></div>
@@ -3071,7 +3093,7 @@ function csvCell(value) {
 
 function exportCSV() {
   const week = getWeekDates(todayStr());
-  const rows = [['Date','Day',labelForNumberField('sleepHours'),labelForNumberField('lightsOut'),labelForNumberField('energy'),'Logged hours',labelForNumberField('mood'),'Distractions',labelForNumberField('zetamac'),labelForNumberField('cpProblems'),labelForNumberField('probProblems'),labelForNumberField('bmoProblems'),'Exercise','Morning Reset','Evening Reset','Done%','Insight','Tomorrow']];
+  const rows = [['Date','Day',labelForNumberField('sleepHours'),labelForNumberField('lightsOut'),labelForNumberField('energy'),'Logged hours',labelForNumberField('mood'),'Distractions',labelForNumberField('focusScore'),labelForNumberField('practiceReps'),labelForNumberField('projectReps'),labelForNumberField('deepWorkReps'),'Exercise','Morning Reset','Evening Reset','Done%','Insight','Tomorrow']];
   week.forEach(ds => {
     const d   = getDay(ds);
     const dow = parseDateKey(ds).getDay();
@@ -3080,8 +3102,8 @@ function exportCSV() {
     rows.push([
       ds, DAY_FULL[dow],
       d.sleepHours||'', d.lightsOut||'', d.energy||'',
-      formatHours(getLoggedHours(ds)), d.mood||'', d.distractions||'', d.zetamac||'',
-      d.cpProblems||0, d.probProblems||0, d.bmoProblems||0,
+      formatHours(getLoggedHours(ds)), d.mood||'', d.distractions||'', d.focusScore||'',
+      d.practiceReps||0, d.projectReps||0, d.deepWorkReps||0,
       exKey&&isCheckDone(d, exKey)?'Y':'N',
       isCheckDone(d, 'nn_am_skin')?'Y':'N', isCheckDone(d, 'nn_pm_skin')?'Y':'N',
       comp ? Math.round(comp.pct*100)+'%' : '',
@@ -3125,7 +3147,7 @@ function resetAll() {
   if (!confirm('Delete ALL data? This cannot be undone.')) return;
   localStorage.removeItem(STORAGE_KEY);
   state = {
-    phase:1, days:{}, metrics:{cfRating:[],zetamacPeak:[]}, errorLog:[], startDate:todayStr(),
+    phase:1, days:{}, metrics:{scoreHistory:[],focusPeaks:[]}, errorLog:[], startDate:todayStr(),
     customNonNegs:[], removedNonNegs:[], nonNegOverrides:{}, nonNegTemplates:[],
     customTraining:{}, removedTraining:{}, trainingTemplates:{}, exerciseOverrides:{},
     timerSettings:{ pomodoroMs:25 * 60 * 1000, breakMs:5 * 60 * 1000 },

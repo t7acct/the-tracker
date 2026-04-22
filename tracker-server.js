@@ -44,12 +44,12 @@ function readBackup() {
   if (!fs.existsSync(dataPath)) {
     return {
       exportedAt: null,
-      app: 'The Tracker',
+      app: 'Tracker',
       version: 3,
       state: {
         phase: 1,
         days: {},
-        metrics: { cfRating: [], zetamacPeak: [] },
+        metrics: { scoreHistory: [], focusPeaks: [] },
         customBenchmarks: [],
         errorLog: [],
         startDate: localDateKey()
@@ -61,13 +61,13 @@ function readBackup() {
   } catch (err) {
     return {
       exportedAt: null,
-      app: 'The Tracker',
+      app: 'Tracker',
       version: 3,
       loadError: `Could not parse ${path.basename(dataPath)}: ${err.message}`,
       state: {
         phase: 1,
         days: {},
-        metrics: { cfRating: [], zetamacPeak: [] },
+        metrics: { scoreHistory: [], focusPeaks: [] },
         customBenchmarks: [],
         errorLog: [],
         startDate: localDateKey()
