@@ -20,7 +20,6 @@ const PHASES = {
 };
 
 const NON_NEGS = [];
-
 const TRAINING = {};
 
 const TARGET_BASE_CFG = {
@@ -60,7 +59,6 @@ function updateTargetsMap() {
 
 
 const EXERCISE_BY_DOW = {};
-
 const SUNDAY_PROTOCOL = [];
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -2253,6 +2251,9 @@ function renderWeekStrip() {
 function renderHabitList(containerId, habits, d, countId, listKind = null) {
   const el = document.getElementById(containerId);
   el.innerHTML = '';
+  if (!habits.length) {
+    el.innerHTML = `<div class="dash-empty">No items yet. Add your first ${listKind === 'nonneg' ? 'non-negotiable' : 'item'} above.</div>`;
+  }
   habits.forEach(h => {
     const checked = isCheckDone(d, h.id);
     const item = document.createElement('div');
@@ -2299,6 +2300,9 @@ function renderHabitList(containerId, habits, d, countId, listKind = null) {
 function renderTrainingList(containerId, habits, d, mode) {
   const el = document.getElementById(containerId);
   el.innerHTML = '';
+  if (!habits.length) {
+    el.innerHTML = `<div class="dash-empty">No tasks yet. Add your first task above.</div>`;
+  }
   habits.forEach(h => {
     const taskKey = trackingIdForTask(h);
     const checked = isCheckDone(d, taskKey);
@@ -2624,15 +2628,19 @@ function renderWeeklyTrainingMix(data) {
 }
 
 function renderWeeklyHeatmap(data) {
-  const rows = [
-    ['AM skin', day => day.amSkin],
-    ['PM skin', day => day.pmSkin],
-    [labelForNumberField('focusScore'), day => day.focusDone],
-    ['Daylight', day => day.light],
-    ['Review', day => day.review],
-    ['Screen off', day => day.screen],
-  ];
-  document.getElementById('weeklyHeatmap').innerHTML = `<div class="weekly-heatmap">
+  const seen = new Map();
+  data.days.forEach(day => {
+    getNonNegs(day.ds, day.difficulty).forEach(item => {
+      if (!seen.has(item.id)) seen.set(item.id, item.text || item.id);
+    });
+  });
+  const rows = [...seen.entries()].slice(0, 8).map(([id, label]) => [label, day => isCheckDone(day.d, id)]);
+  const el = document.getElementById('weeklyHeatmap');
+  if (!rows.length) {
+    el.innerHTML = `<div class="dash-empty">No non-negotiables configured yet</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="weekly-heatmap">
     <div></div>${data.days.map(day => `<div class="heat-label" style="text-align:center">${DAY_NAMES[day.dow]}</div>`).join('')}
     ${rows.map(([label, fn]) => `
       <div class="heat-label">${label}</div>
