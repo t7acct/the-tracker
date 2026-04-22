@@ -184,7 +184,7 @@ const STORAGE_KEY = 'tracker_consumer_state';
 const BACKUP_DB = 'tracker_consumer_backup_db';
 const BACKUP_STORE = 'handles';
 const BACKUP_HANDLE_KEY = 'tracker-data';
-const DEFAULT_TITLE = 'The Tracker';
+const DEFAULT_TITLE = 'Tracker';
 
 const TODAY_NUMBER_FIELDS = [
   { key:'sleepHours', id:'inp-sleep',    label:'Sleep Hours',          type:'number', attrs:'min="0" max="12" step="0.5"', placeholder:'7.5' },
