@@ -502,13 +502,24 @@ function clearInputs(ids) {
   ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 
+function getCheckedScopes(containerId) {
+  const checked = [...document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`)].map(input => input.value);
+  return [...new Set(checked.filter(value => DIFFICULTY_KEYS.includes(value)))];
+}
+
+function renderScopeBadges(item) {
+  const scopes = normalizeAppliesTo(item.appliesTo);
+  if (scopes.length === DIFFICULTY_KEYS.length) return '';
+  return `<div class="scope-badges">${scopes.map(scope => `<span class="scope-badge">${DIFFICULTY_LABELS[scope]}</span>`).join('')}</div>`;
+}
+
 function adjustInpValue(id, delta) {
   const el = document.getElementById(id);
   if (!el) return;
   const isTime = id.includes('Hours');
   let val = isTime ? parseTimeStr(el.value) : parseFloat(el.value);
   if (isNaN(val)) val = 0;
-
+  
   const newVal = Math.max(0, val + delta);
   el.value = isTime ? formatHours(newVal) : newVal;
 }
@@ -528,7 +539,50 @@ function showToast(message, kind = 'success') {
   }, 3000);
 }
 
-function formatDateLabel(ds) {  try {
+function closeScopePopup() {
+  const el = document.getElementById('scopePopup');
+  if (el) el.remove();
+  if (_scopeOutsideHandler) {
+    document.removeEventListener('click', _scopeOutsideHandler);
+    _scopeOutsideHandler = null;
+  }
+}
+
+function showScopePopup(anchorEl, dayName, dateLabel, onAllWeekdays, onThisDayOnly, onThisDateOnly, onCancel) {
+  closeScopePopup();
+  const popup = document.createElement('div');
+  popup.id = 'scopePopup';
+  popup.className = 'scope-popup';
+  popup.innerHTML = `
+    <div class="scope-popup-label">Apply change to</div>
+    <button class="scope-popup-btn" id="scopeAll"><span class="scope-icon">📅</span>All weekdays (Mon–Fri) permanently</button>
+    <button class="scope-popup-btn" id="scopeDay"><span class="scope-icon">🔁</span>Every ${dayName} going forward</button>
+    <button class="scope-popup-btn" id="scopeDate"><span class="scope-icon">📌</span>This date only (${dateLabel})</button>
+  `;
+  document.body.appendChild(popup);
+  const rect = anchorEl.getBoundingClientRect();
+  popup.style.top = (rect.bottom + 6) + 'px';
+  popup.style.left = rect.left + 'px';
+  requestAnimationFrame(() => {
+    const pr = popup.getBoundingClientRect();
+    if (pr.right > window.innerWidth - 10) popup.style.left = (window.innerWidth - pr.width - 10) + 'px';
+    if (pr.bottom > window.innerHeight - 10) popup.style.top = (rect.top - pr.height - 6) + 'px';
+  });
+  const choose = fn => e => {
+    e.stopPropagation();
+    if (_scopeOutsideHandler) { document.removeEventListener('click', _scopeOutsideHandler); _scopeOutsideHandler = null; }
+    closeScopePopup();
+    fn();
+  };
+  document.getElementById('scopeAll').onclick  = choose(onAllWeekdays);
+  document.getElementById('scopeDay').onclick  = choose(onThisDayOnly);
+  document.getElementById('scopeDate').onclick = choose(onThisDateOnly);
+  _scopeOutsideHandler = () => { _scopeOutsideHandler = null; closeScopePopup(); if (onCancel) onCancel(); };
+  setTimeout(() => document.addEventListener('click', _scopeOutsideHandler, { once: true }), 0);
+}
+
+function formatDateLabel(ds) {
+  try {
     return formatDate(ds, { weekday: 'short', day: 'numeric', month: 'short' });
   } catch { return ds; }
 }
@@ -735,28 +789,47 @@ function addNonNeg(btn) {
   const meta = document.getElementById('nn-new-meta').value.trim();
   const tag = document.getElementById('nn-new-tag').value.trim();
   if (!text) return;
+  const scopes = getCheckedScopes('nn-new-scope');
+  if (!scopes.length) { showToast('Daily task scope missing', 'danger'); return; }
+  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const newItem = { id: newCustomId('nn_custom'), text, meta, tag, appliesTo: ['hard'] };
-  
-  const items = getNonNegTemplateItems(ds).map(stripRuntime);
-  items.push(newItem);
-  if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {};
-  state.nonNegDateOverrides[ds] = items;
-  
-  clearInputs(['nn-new-text', 'nn-new-meta', 'nn-new-tag']);
-  save(); renderDaily();
+  const dayName = DAY_FULL[dow];
+  const newItem = { id: newCustomId('nn_custom'), text, meta, tag, appliesTo: scopes };
+  const doAdd = (saveFn) => {
+    const items = getNonNegTemplateItems(ds).map(stripRuntime);
+    items.push(newItem);
+    saveFn(items);
+    clearInputs(['nn-new-text', 'nn-new-meta', 'nn-new-tag']);
+    save(); renderDaily();
+  };
+  showScopePopup(btn, dayName, ds,
+    () => doAdd(i => saveNonNegTemplate(i)),
+    () => doAdd(i => saveNonNegTemplateForDow(i, dow)),
+    () => doAdd(i => { if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {}; state.nonNegDateOverrides[ds] = i; })
+  );
 }
 
 function removeNonNeg(id, btn) {
+  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const items = getNonNegTemplateItems(ds).filter(item => item.id !== id).map(stripRuntime);
-  if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {};
-  state.nonNegDateOverrides[ds] = items;
-  save(); renderDaily();
+  const dayName = DAY_FULL[dow];
+  const doRemove = (saveFn) => {
+    const items = getNonNegTemplateItems(ds).filter(item => item.id !== id).map(stripRuntime);
+    saveFn(items);
+    save(); renderDaily();
+  };
+  showScopePopup(btn, dayName, ds,
+    () => doRemove(i => saveNonNegTemplate(i)),
+    () => doRemove(i => saveNonNegTemplateForDow(i, dow)),
+    () => doRemove(i => { if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {}; state.nonNegDateOverrides[ds] = i; })
+  );
 }
 
 function resetNonNegs() {
+  saveNonNegTemplate(NON_NEGS);
   if (state.nonNegDateOverrides) delete state.nonNegDateOverrides[selectedDate];
+  const dow = parseDateKey(selectedDate).getDay();
+  if (state.nonNegTemplatesByDow) delete state.nonNegTemplatesByDow[dow];
   pendingNonNegEdit = null;
   save();
   renderDaily();
@@ -773,48 +846,69 @@ function updateNonNeg(id, source, field, value) {
 }
 
 function confirmNonNegEdit(doneBtn) {
+  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
+  const dayName = DAY_FULL[dow];
   const items = (pendingNonNegEdit?.ds === ds ? pendingNonNegEdit.items : getNonNegTemplateItems(ds)).map(stripRuntime);
-  if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {};
-  state.nonNegDateOverrides[ds] = items;
-  pendingNonNegEdit = null;
-  editingNonNegId = null;
-  save();
-  renderDaily();
+  const commit = saveFn => { saveFn(); pendingNonNegEdit = null; save(); editingNonNegId = null; renderDaily(); };
+  const cancel = () => { pendingNonNegEdit = null; editingNonNegId = null; renderDaily(); };
+  showScopePopup(doneBtn, dayName, formatDateLabel(ds),
+    () => commit(() => saveNonNegTemplate(items)),
+    () => commit(() => saveNonNegTemplateForDow(items, dow)),
+    () => commit(() => { if (!state.nonNegDateOverrides) state.nonNegDateOverrides = {}; state.nonNegDateOverrides[ds] = items; }),
+    cancel
+  );
 }
 
 function addTrainingItem(btn) {
+  const dow = parseDateKey(selectedDate).getDay();
+  if (defaultDifficultyForDow(dow) === 'rest') {
+    showToast('Rest days use no daily task set', 'danger');
+    return;
+  }
+  const difficulties = getCheckedScopes('tr-new-scope');
   const text = document.getElementById('tr-new-text').value.trim();
   const meta = document.getElementById('tr-new-meta').value.trim();
   const tag = document.getElementById('tr-new-tag').value.trim();
   if (!text) return;
-  
+  if (!difficulties.length) {
+    showToast('Daily task scope missing', 'danger');
+    return;
+  }
   const id = newCustomId('tr_custom');
+  const difficulty = 'hard';
   const ds = selectedDate;
-  const newItem = { id, trackingId: id, text, meta, tag, time: '', appliesTo: ['hard'] };
-  
-  const items = getTraining('hard', parseDateKey(ds).getDay(), ds).map(stripRuntime);
-  items.push(newItem);
-  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
-  state.trainingDateOverrides[ds] = items;
-  
-  clearInputs(['tr-new-text', 'tr-new-meta', 'tr-new-tag']);
-  save(); renderDaily();
+  const dayName = DAY_FULL[dow];
+  const newItem = { id, trackingId: id, text, meta, tag, time: '', appliesTo: difficulties };
+  const doAdd = (saveFn) => {
+    const items = getTraining(difficulty, dow, ds).map(stripRuntime);
+    items.push(newItem);
+    saveFn(items);
+    clearInputs(['tr-new-text', 'tr-new-meta', 'tr-new-tag']);
+    save(); renderDaily();
+  };
+  showScopePopup(btn, dayName, ds,
+    () => doAdd(i => saveDailyTaskTemplate(i, difficulty)),
+    () => doAdd(i => saveTrainingTemplate(difficulty, dow, i)),
+    () => doAdd(i => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = i; })
+  );
 }
 
 function removeTrainingItem(difficulty, id, btn) {
+  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const dow = parseDateKey(ds).getDay();
+  const dayName = DAY_FULL[dow];
   const trackingId = trackingIdForTask(getTraining(difficulty, dow, ds).find(item => item.id === id) || id);
   const items = getTraining('hard', dow, ds).filter(item => trackingIdForTask(item) !== trackingId).map(stripRuntime);
-  
-  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
-  state.trainingDateOverrides[ds] = items;
-  save(); renderDaily();
+  showScopePopup(btn, dayName, ds,
+    () => { saveDailyTaskTemplate(items); save(); renderDaily(); },
+    () => { saveTrainingTemplate('hard', dow, items); save(); renderDaily(); },
+    () => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = items; save(); renderDaily(); }
+  );
 }
 
 function resetTrainingMode(difficulty) {
-  if (state.trainingDateOverrides) delete state.trainingDateOverrides[selectedDate];
+  saveDailyTaskTemplate(defaultTrainingForDifficulty('hard'));
   save();
   renderDaily();
 }
@@ -829,20 +923,25 @@ function updateTrainingTask(difficulty, id, field, value) {
 }
 
 function confirmTrainingEdit(doneBtn) {
+  const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
-  const items = (pendingTrainingEdit?.ds === ds ? pendingTrainingEdit.items : getTraining('hard', parseDateKey(ds).getDay(), ds)).map(stripRuntime);
-  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
-  state.trainingDateOverrides[ds] = items;
-  pendingTrainingEdit = null;
-  editingTrainingId = null;
-  save();
-  renderDaily();
+  const dayName = DAY_FULL[dow];
+  const items = (pendingTrainingEdit?.ds === ds ? pendingTrainingEdit.items : getTraining('hard', dow, ds)).map(stripRuntime);
+  const commit = saveFn => { saveFn(); pendingTrainingEdit = null; save(); editingTrainingId = null; renderDaily(); };
+  const cancel = () => { pendingTrainingEdit = null; editingTrainingId = null; renderDaily(); };
+  showScopePopup(doneBtn, dayName, formatDateLabel(ds),
+    () => commit(() => saveDailyTaskTemplate(items)),
+    () => commit(() => saveTrainingTemplate('hard', dow, items)),
+    () => commit(() => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = items; }),
+    cancel
+  );
 }
 
 function reorderTrainingItem(difficulty, fromId, toId, anchorEl) {
   if (!fromId || !toId || fromId === toId) { dragTrainingId = null; return; }
   const dow = parseDateKey(selectedDate).getDay();
   const ds = selectedDate;
+  const dayName = DAY_FULL[dow];
   const items = getTraining('hard', dow, ds).map(stripRuntime);
   const fromIndex = items.findIndex(item => item.id === fromId);
   const toIndex   = items.findIndex(item => item.id === toId);
@@ -850,10 +949,11 @@ function reorderTrainingItem(difficulty, fromId, toId, anchorEl) {
   const [moved] = items.splice(fromIndex, 1);
   const targetIndex = items.findIndex(item => item.id === toId);
   items.splice(targetIndex < 0 ? toIndex : targetIndex, 0, moved);
-
-  if (!state.trainingDateOverrides) state.trainingDateOverrides = {};
-  state.trainingDateOverrides[ds] = items;
-  save(); renderDaily();
+  showScopePopup(anchorEl, dayName, formatDateLabel(ds),
+    () => { saveDailyTaskTemplate(items); save(); renderDaily(); },
+    () => { saveTrainingTemplate('hard', dow, items); save(); renderDaily(); },
+    () => { if (!state.trainingDateOverrides) state.trainingDateOverrides = {}; state.trainingDateOverrides[ds] = items; save(); renderDaily(); }
+  );
 }
 
 function startTrainingDrag(id) {
@@ -2204,6 +2304,7 @@ function renderHabitList(containerId, habits, d, countId, listKind = null) {
       <div style="flex:1; min-width:0">
         <div class="habit-text">${escapeAttr(h.text)}</div>
         ${h.meta ? `<div class="habit-meta">${escapeAttr(h.meta)}</div>` : ''}
+        ${renderScopeBadges(h)}
       </div>
       ${h.tag  ? `<span class="habit-tag">${escapeAttr(h.tag)}</span>` : ''}
       ${listKind === 'nonneg' ? `<div class="item-actions"><button class="icon-btn" title="Remove" onclick="event.stopPropagation(); removeNonNeg('${h.id}',this)">×</button></div>` : ''}`;
@@ -2261,6 +2362,7 @@ function renderTrainingList(containerId, habits, d, mode) {
         <div class="task-view-main">
           <div class="habit-text">${escapeAttr(h.text || '')}</div>
           ${h.meta ? `<div class="habit-meta">${escapeAttr(h.meta)}</div>` : ''}
+          ${renderScopeBadges(h)}
         </div>
         ${h.tag ? `<span class="habit-tag">${escapeAttr(h.tag)}</span>` : '<span></span>'}
         <button class="task-hours-chip" onclick="event.stopPropagation(); editingTrainingId='${taskKey}'; renderDaily()"><strong>${formatHours(hours)}</strong></button>
