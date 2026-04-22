@@ -30,20 +30,9 @@ const TARGET_BASE_CFG = {
 const DIFFICULTY_KEYS = ['hard'];
 const DIFFICULTY_LABELS = { hard:'Daily' };
 const WORKDAY_DOWS = [1, 2, 3, 4, 5];
-const TRAINING_ID_ALIASES = {
-  t2_focus:'tr_focus',
-  t4_focus:'tr_focus',
-  t6_focus:'tr_focus',
-  fb30_focus:'tr_focus',
-  fb60_focus:'tr_focus',
-  fb90_focus:'tr_focus'
-};
-const TRACKING_ID_TO_DISPLAY_ID = {
-  tr_focus:'t2_focus'
-};
-const LINKED_CHECK_GROUPS = [
-  ['nn_focus_rep', 'tr_focus']
-];
+const TRAINING_ID_ALIASES = {};
+const TRACKING_ID_TO_DISPLAY_ID = {};
+const LINKED_CHECK_GROUPS = [];
 
 let TARGETS = {};
 function updateTargetsMap() {
@@ -63,15 +52,7 @@ const SUNDAY_PROTOCOL = [];
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAY_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const DAY_FOCUS = {
-  1:'Set the week up',
-  2:'Deep work + practice',
-  3:'Midweek review + focused output',
-  4:'Deep work + learning',
-  5:'Close loops + weekly readout',
-  6:'Rest Day · maintenance only',
-  0:'Rest Day',
-};
+const DAY_FOCUS = {};
 
 // ──────────────────────────────────────────────────────────────────
 // STATE + STORAGE
@@ -130,13 +111,8 @@ function linkedCheckIds(id) {
   return group || [canonical];
 }
 
-function isFocusRepDone(d) {
-  return !!(d.checks?.nn_focus_rep || d.checks?.tr_focus || (d.focusScore !== null && d.focusScore !== undefined && d.focusScore !== ''));
-}
-
 function isCheckDone(d, id) {
   const canonical = trackingIdForTask(id);
-  if (linkedCheckIds(canonical).includes('tr_focus')) return isFocusRepDone(d);
   return !!d.checks?.[canonical];
 }
 
@@ -171,97 +147,9 @@ function itemAppliesToDifficulty(item, difficulty) {
   return normalizeAppliesTo(item.appliesTo).includes(difficulty);
 }
 
-function migrateTrainingIdentity() {
-  Object.values(state.days || {}).forEach(day => {
-    migrateLegacyDayFields(day);
-    if (day.taskHours) {
-      Object.entries(TRAINING_ID_ALIASES).forEach(([oldId, newId]) => {
-        if (day.taskHours[oldId] !== undefined) {
-          const oldVal = +day.taskHours[oldId] || 0;
-          if (oldVal < 0) console.warn('Negative hours in migration:', oldId, oldVal);
-          day.taskHours[newId] = Math.round(((+day.taskHours[newId] || 0) + Math.max(0, oldVal)) * 10000) / 10000;
-          delete day.taskHours[oldId];
-        }
-      });
-    }
-    if (day.checks) {
-      Object.entries(TRAINING_ID_ALIASES).forEach(([oldId, newId]) => {
-        if (day.checks[oldId] !== undefined) {
-          day.checks[newId] = !!day.checks[newId] || !!day.checks[oldId];
-          delete day.checks[oldId];
-        }
-      });
-      LINKED_CHECK_GROUPS.forEach(group => {
-        if (group.some(id => day.checks[id])) group.forEach(id => { day.checks[id] = true; });
-      });
-    }
-  });
-  Object.keys(state.trainingTemplates || {}).forEach(key => {
-    state.trainingTemplates[key].forEach(entry => {
-      entry.items = canonicalizeTrainingItems(entry.items);
-    });
-  });
-  Object.keys(state.customTraining || {}).forEach(key => {
-    state.customTraining[key] = canonicalizeTrainingItems(state.customTraining[key]);
-  });
-  Object.keys(state.removedTraining || {}).forEach(key => {
-    state.removedTraining[key] = [...new Set((state.removedTraining[key] || []).map(canonicalTrainingId))];
-  });
-}
-
-function legacyKey(...parts) {
-  return parts.join('');
-}
-
-function migrateLegacyDayFields(day) {
-  const legacyFocus = legacyKey('ze', 'ta', 'mac');
-  if (day[legacyFocus] !== undefined && day.focusScore === undefined) {
-    day.focusScore = day[legacyFocus];
-    delete day[legacyFocus];
-  }
-  const fieldMap = [
-    [String.fromCharCode(99, 112) + 'Problems', 'practiceReps'],
-    [String.fromCharCode(112, 114, 111, 98) + 'Problems', 'projectReps'],
-    [String.fromCharCode(98, 109, 111) + 'Problems', 'deepWorkReps']
-  ];
-  fieldMap.forEach(([oldKey, newKey]) => {
-    if (day[oldKey] !== undefined && day[newKey] === undefined) {
-      day[newKey] = day[oldKey];
-      delete day[oldKey];
-    }
-  });
-  const oldMilestoneKey = String.fromCharCode(99, 102) + 'Contest';
-  if (day[oldMilestoneKey] !== undefined && day.keyMilestone === undefined) {
-    day.keyMilestone = day[oldMilestoneKey];
-    delete day[oldMilestoneKey];
-  }
-  if (day.checks) {
-    const legacyFocusCheck = ['nn', legacyKey('ze', 'ta', 'mac')].join('_');
-    if (day.checks[legacyFocusCheck] !== undefined && day.checks.nn_focus_rep === undefined) {
-      day.checks.nn_focus_rep = day.checks[legacyFocusCheck];
-      delete day.checks[legacyFocusCheck];
-    }
-  }
-}
-
-function migrateLegacyMetrics() {
-  if (!state.metrics || typeof state.metrics !== 'object') state.metrics = {};
-  const legacyScore = legacyKey('c', 'f', 'Rating');
-  const legacyFocusPeak = legacyKey('ze', 'ta', 'mac', 'Peak');
-  if (Array.isArray(state.metrics[legacyScore]) && !Array.isArray(state.metrics.scoreHistory)) {
-    state.metrics.scoreHistory = state.metrics[legacyScore];
-  }
-  if (Array.isArray(state.metrics[legacyFocusPeak]) && !Array.isArray(state.metrics.focusPeaks)) {
-    state.metrics.focusPeaks = state.metrics[legacyFocusPeak];
-  }
-  delete state.metrics[legacyScore];
-  delete state.metrics[legacyFocusPeak];
-}
-
 function normalizeState() {
   if (!state.phase)      state.phase = 1;
   if (!state.days)       state.days = {};
-  migrateLegacyMetrics();
   if (!state.metrics)    state.metrics = { scoreHistory: [], focusPeaks: [] };
   if (!state.metrics.scoreHistory) state.metrics.scoreHistory = [];
   if (!state.metrics.focusPeaks) state.metrics.focusPeaks = [];
@@ -291,7 +179,6 @@ function normalizeState() {
     createdAt: r.createdAt || new Date().toISOString()
   })).filter(r => r.text && /^\d{4}-\d{2}-\d{2}$/.test(r.date));
   Object.keys(state).forEach(key => { if (/^tutor/i.test(key)) delete state[key]; });
-  migrateTrainingIdentity();
   updateTargetsMap();
 }
 
@@ -2531,13 +2418,6 @@ function computeWeeklyData(ref) {
       oaDone,
       contest: hasCompletedContest(ds),
       exerciseDone: exercises.some(ex => isCheckDone(d, ex.id)),
-      amSkin: nnMatch('skin', 'am skin') || isCheckDone(d, 'nn_am_skin'),
-      pmSkin: nnMatch('skin', 'pm skin') || isCheckDone(d, 'nn_pm_skin'),
-      focusDone: nnMatch('focus', 'focus rep') || isCheckDone(d, 'nn_focus_rep'),
-      light: nnMatch('light', 'light') || isCheckDone(d, 'nn_light'),
-      review: nnMatch('review', 'review') || isCheckDone(d, 'nn_review'),
-      screen: nnMatch('screen', 'screen') || isCheckDone(d, 'nn_screen'),
-      sundayDone: dow === 0 && SUNDAY_PROTOCOL.every(h => isCheckDone(d, h.id)),
       isToday: ds === today,
     };
     row.quality = computeDailyQuality(row);
@@ -2558,14 +2438,11 @@ function computeWeeklyData(ref) {
     acc.energyN += day.energy !== null ? 1 : 0;
     acc.z2 += day.exercises.some(ex => ex.text.toLowerCase().includes('zone 2') && isCheckDone(day.d, ex.id)) ? 1 : 0;
     acc.strength += day.exerciseDone && (day.dow === 1 || day.dow === 4) ? 1 : 0;
-    acc.skAM += day.amSkin ? 1 : 0;
-    acc.skPM += day.pmSkin ? 1 : 0;
-    acc.contests += day.contest ? 1 : 0;
     acc.oaDone += day.oaDone ? 1 : 0;
     acc.completion += day.completion;
     acc.quality += day.quality;
     return acc;
-  }, { hours:0,target:0,practice:0,project:0,deepWork:0,focus:0,focusN:0,sleep:0,sleepN:0,energy:0,energyN:0,z2:0,strength:0,skAM:0,skPM:0,contests:0,oaDone:0,completion:0,quality:0 });
+  }, { hours:0,target:0,practice:0,project:0,deepWork:0,focus:0,focusN:0,sleep:0,sleepN:0,energy:0,energyN:0,z2:0,strength:0,oaDone:0,completion:0,quality:0 });
 
   const errorCount = state.errorLog.filter(e => week.includes(e.date)).length;
   const avgSleep = totals.sleepN ? +(totals.sleep / totals.sleepN).toFixed(1) : null;
@@ -3066,7 +2943,7 @@ function csvCell(value) {
 
 function exportCSV() {
   const week = getWeekDates(todayStr());
-  const rows = [['Date','Day',labelForNumberField('sleepHours'),labelForNumberField('lightsOut'),labelForNumberField('energy'),'Logged hours',labelForNumberField('mood'),'Distractions',labelForNumberField('focusScore'),labelForNumberField('practiceReps'),labelForNumberField('projectReps'),labelForNumberField('deepWorkReps'),'Exercise','Morning Reset','Evening Reset','Done%','Insight','Tomorrow']];
+  const rows = [['Date','Day',labelForNumberField('sleepHours'),labelForNumberField('lightsOut'),labelForNumberField('energy'),'Logged hours',labelForNumberField('mood'),'Distractions',labelForNumberField('focusScore'),labelForNumberField('practiceReps'),labelForNumberField('projectReps'),labelForNumberField('deepWorkReps'),'Exercise','Done%','Insight','Tomorrow']];
   week.forEach(ds => {
     const d   = getDay(ds);
     const dow = parseDateKey(ds).getDay();
@@ -3079,7 +2956,6 @@ function exportCSV() {
       formatHours(getLoggedHours(ds)), d.mood||'', d.distractions||'', d.focusScore||'',
       d.practiceReps||0, d.projectReps||0, d.deepWorkReps||0,
       exValue || '—',
-      isCheckDone(d, 'nn_am_skin')?'Y':'N', isCheckDone(d, 'nn_pm_skin')?'Y':'N',
       comp ? Math.round(comp.pct*100)+'%' : '',
       (d.insight||'').replace(/,/g,' '),
       (d.tomorrow||'').replace(/,/g,' '),
