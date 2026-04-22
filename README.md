@@ -1,4 +1,4 @@
-# The Tracker
+# Tracker
 
 A local-first daily tracker with tasks, timer, weekly logs, error log, customizable daily metrics, and custom benchmarks.
 

@@ -1067,9 +1067,9 @@ textarea { resize:vertical; min-height:80px; line-height:1.5; }
   background:var(--surf2); border:1px solid var(--border);
 }
 .mix-segment { min-height:3px; }
-.mix-cp { background:var(--accent); }
-.mix-prob { background:var(--blue); }
-.mix-olympiad { background:var(--amber); }
+.mix-practice { background:var(--accent); }
+.mix-project { background:var(--blue); }
+.mix-deep { background:var(--amber); }
 .mix-oa { background:var(--green); }
 .mix-label { color:var(--muted); font-size:.58rem; text-align:center; margin-top:5px; }
 .mix-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:.62rem; color:var(--dim); }
