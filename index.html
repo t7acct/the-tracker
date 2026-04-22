@@ -121,8 +121,11 @@
       <input type="text" id="nn-new-text" placeholder="New non-negotiable">
       <input type="text" id="nn-new-meta" placeholder="Note / target">
       <input type="text" id="nn-new-tag" placeholder="Tag">
-      <div></div><div></div>
-      <button class="btn sm primary" onclick="addNonNeg(this)">Add</button>
+      <div class="scope-picker hidden" id="nn-new-scope">
+        <label><input type="checkbox" value="hard" checked> Daily</label>
+      </div>
+      <div class="timer-log-line">Applies from this date forward</div>
+      <button class="btn sm primary" style="grid-column: 6" onclick="addNonNeg(this)">Add</button>
     </div>
     <div id="nnList"></div>
   </div>
@@ -134,8 +137,11 @@
       <input type="text" id="tr-new-text" placeholder="New training item">
       <input type="text" id="tr-new-meta" placeholder="Note / target">
       <input type="text" id="tr-new-tag" placeholder="Tag">
-      <div></div><div></div>
-      <button class="btn sm primary" onclick="addTrainingItem(this)">Add</button>
+      <div class="scope-picker hidden" id="tr-new-scope">
+        <label><input type="checkbox" value="hard" checked> Daily</label>
+      </div>
+      <div class="timer-log-line">Applies to every future workday</div>
+      <button class="btn sm primary" style="grid-column: 6" onclick="addTrainingItem(this)">Add</button>
     </div>
     <div id="trainingList"></div>
   </div>
