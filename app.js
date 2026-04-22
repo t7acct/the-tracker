@@ -19,62 +19,8 @@ const PHASES = {
   4: { label:'Phase 4 — Integrate',  desc:'Pressure-test the system, simplify what is noisy, and keep the useful routines durable.' },
 };
 
-const NON_NEGS = [
-  { id:'nn_wake',    text:'Wake within 30 min of target',                meta:'Keep the day anchored',          tag:'sleep',     dur:'0:00' },
-  { id:'nn_light',   text:'10 min outdoor daylight',                     meta:'Step outside early',             tag:'energy',    dur:'0:10' },
-  { id:'nn_caff',    text:'Caffeine cutoff',                             meta:'Protect tonight',                tag:'sleep',     dur:'0:00' },
-  { id:'nn_screen',  text:'Screens off before bed',                      meta:'Phone away from bed',            tag:'sleep',     dur:'0:00' },
-  { id:'nn_focus_rep', text:'Daily focus rep',                              meta:'Tiny skill drill or warmup',      tag:'focus',     dur:'0:05' },
-  { id:'nn_review',  text:'Review yesterday',                            meta:'One lesson, one adjustment',      tag:'review',    dur:'0:10' },
-  { id:'nn_am_skin', text:'Morning reset',                               meta:'Hydrate, wash, get ready',        tag:'care',      dur:'0:05' },
-  { id:'nn_pm_skin', text:'Evening reset',                               meta:'Tidy, wash, prepare tomorrow',    tag:'care',      dur:'0:05' },
-];
-
-const TRAINING = {
-  '2h': [
-    { id:'t2_focus', trackingId:'tr_focus', text:'Daily focus rep',          meta:'5 min warmup',             time:'0:00', tag:'focus'    },
-    { id:'t2_project',   text:'Primary project block',                meta:'One meaningful unit',      time:'0:05', tag:'project'  },
-    { id:'t2_walk', text:'Walk, water, daylight',                meta:'15 min recovery',          time:'1:00', tag:'recovery' },
-    { id:'t2_learning', text:'Learning or practice block',           meta:'Write what improved',      time:'1:15', tag:'learn'    },
-  ],
-  '4h': [
-    { id:'t4_focus', trackingId:'tr_focus', text:'Daily focus rep',          meta:'5 min warmup',                    time:'0:00', tag:'focus'    },
-    { id:'t4_project',   text:'Primary project block',                   meta:'Deep work, phone away',            time:'0:05', tag:'project'  },
-    { id:'t4_walk', text:'Movement break',                          meta:'20 min recovery + daylight',       time:'1:30', tag:'recovery' },
-    { id:'t4_learning', text:'Skill practice block',                    meta:'Course, craft, study, or reps',    time:'1:50', tag:'learn'    },
-    { id:'t4_rev',  text:'Review log',                              meta:'15 min, one lesson captured',      time:'3:00', tag:'review'   },
-    { id:'t4_oa',   text:'Admin or life maintenance',               meta:'Clear small obligations',          time:'3:15', tag:'admin'    },
-  ],
-  '6h': [
-    { id:'t6_focus', trackingId:'tr_focus', text:'Daily focus rep',          meta:'5 min warmup',                    time:'0:00', tag:'focus'    },
-    { id:'t6_cont',  text:'Primary deep-work block',                meta:'Two hours, one clear output',       time:'0:05', tag:'project'  },
-    { id:'t6_rec',   text:'Long walk or workout + real food',       meta:'30 min recovery',                   time:'2:00', tag:'recovery' },
-    { id:'t6_learning',  text:'Secondary skill block',                  meta:'Practice, study, or create',        time:'2:30', tag:'learn'    },
-    { id:'t6_rev',   text:'Review log + notes',                     meta:'Max 15 min',                        time:'4:00', tag:'review'   },
-    { id:'t6_ups',   text:'Ship or close the loop',                 meta:'Finish, publish, submit, or tidy',  time:'4:15', tag:'project'  },
-    { id:'t6_walk2', text:'Short reset',                            meta:'15 min',                            time:'5:15', tag:'recovery' },
-    { id:'t6_oa',    text:'Light maintenance block',                meta:'Reading, admin, or planning',       time:'5:30', tag:'admin'    },
-  ],
-  'fb30': [
-    { id:'fb30_focus', trackingId:'tr_focus', text:'Daily focus rep',        meta:'2 min',                           time:'0:00', tag:'focus'  },
-    { id:'fb30_read', text:'Review one note',                      meta:'Preserve the streak',             time:'0:02', tag:'review' },
-    { id:'fb30_re',   text:'One tiny progress rep',                meta:'Make it count',                    time:'0:10', tag:'project' },
-    { id:'fb30_note', text:'Write one-line note for tomorrow',     meta:'',                                 time:'0:25', tag:'review' },
-  ],
-  'fb60': [
-    { id:'fb60_focus', trackingId:'tr_focus', text:'Daily focus rep',        meta:'3 min',                           time:'0:00', tag:'focus'  },
-    { id:'fb60_main', text:'One important block',                 meta:'Pick the highest-leverage thing',   time:'0:03', tag:'project' },
-    { id:'fb60_edit', text:'Extract one pattern',                 meta:'Write it in the log',               time:'0:35', tag:'review' },
-    { id:'fb60_anki', text:'Maintenance pass',                    meta:'Keep the system warm',              time:'0:45', tag:'admin'  },
-    { id:'fb60_retro',text:'One-sentence retrospective',          meta:'What did I actually learn?',        time:'0:55', tag:'review' },
-  ],
-  'fb90': [
-    { id:'fb90_focus', trackingId:'tr_focus', text:'Daily focus rep',        meta:'3 min',                           time:'0:00', tag:'focus'  },
-    { id:'fb90_main', text:'Deep work plus practice',             meta:'One output, one rep',               time:'0:03', tag:'project' },
-    { id:'fb90_rev',  text:'Review log',                         meta:'',                                  time:'1:00', tag:'review' },
-    { id:'fb90_anki', text:'Maintenance + one-sentence retro',    meta:'',                                  time:'1:15', tag:'review' },
-  ],
-};
+const NON_NEGS = [];
+const TRAINING = {};
 
 const TARGET_BASE_CFG = {
   rest:   { label:'Rest',       short:'Rest',  base:'2h',  target: 0,   desc:'Weekend rest day: recovery and optional light review only.' },
@@ -112,24 +58,8 @@ function updateTargetsMap() {
 }
 
 
-const EXERCISE_BY_DOW = {
-  1: { id:'ex_strength1', text:'Strength training — 45 min', meta:'Compound lifts, Monday anchor' },
-  2: { id:'ex_zone2a',    text:'Zone 2 cycle — 45–60 min',  meta:'Conversational pace, no phone' },
-  3: { id:'ex_zone2c',    text:'Zone 2 cycle or brisk walk — 45 min', meta:'Midweek aerobic base' },
-  4: { id:'ex_strength2', text:'Strength training — 45 min', meta:'Thursday lift' },
-  5: { id:'ex_zone2b',    text:'Zone 2 cycle — 45–60 min',  meta:'Friday aerobic' },
-  6: { id:'ex_rest_sat',  text:'Rest day',                   meta:'Saturday — no scheduled training' },
-  0: { id:'ex_rest_sun',  text:'Rest day',                   meta:'Sunday — recovery + review only' },
-};
-
-const SUNDAY_PROTOCOL = [
-  { id:'sun_metrics', text:'Metric review — sleep, energy, hours, movement, and completion', meta:'Trend, not absolute',      dur:'15 min' },
-  { id:'sun_errors',  text:'Error log scan — re-read misses and cluster recurring friction',  meta:'3x same = bottleneck',    dur:'20 min' },
-  { id:'sun_anki',    text:'Review useful notes',                                             meta:'Keep insights, not noise', dur:'20 min' },
-  { id:'sun_plan',    text:'Next week setup — pick one priority and one constraint',          meta:'Schedule them',            dur:'15 min' },
-  { id:'sun_body',    text:'Body check — sleep, movement, food, and care streak',             meta:'One fix if missed',        dur:'10 min' },
-  { id:'sun_walk',    text:'Long walk — off the desk, outside, no music first',                          meta:'Best ideas live here',    dur:'rest'   },
-];
+const EXERCISE_BY_DOW = {};
+const SUNDAY_PROTOCOL = [];
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAY_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -140,7 +70,7 @@ const DAY_FOCUS = {
   4:'Deep work + learning',
   5:'Close loops + weekly readout',
   6:'Rest Day · maintenance only',
-  0:'Rest Day · Sunday Protocol + light review',
+  0:'Rest Day',
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -526,7 +456,7 @@ function getExerciseForDate(ds) {
 function defaultTrainingForDifficulty(difficulty) {
   if (difficulty === 'rest') return [];
   const target = TARGETS[difficulty] || TARGETS.hard;
-  const base = canonicalizeTrainingItems((TRAINING[target.base] || TRAINING['4h']).map(item => ({ ...item })));
+  const base = canonicalizeTrainingItems((TRAINING[target.base] || []).map(item => ({ ...item })));
   return canonicalizeTrainingItems(base);
 }
 
@@ -2183,8 +2113,8 @@ function renderDaily() {
 
   // Sunday panel
   const sp = document.getElementById('sundayPanel');
-  sp.style.display = dow === 0 ? 'block' : 'none';
-  if (dow === 0) renderSundayList(d);
+  sp.style.display = dow === 0 && SUNDAY_PROTOCOL.length ? 'block' : 'none';
+  if (dow === 0 && SUNDAY_PROTOCOL.length) renderSundayList(d);
 
   // Non-negotiables
   renderHabitList('nnList', getNonNegs(), d, 'nnCount', 'nonneg');
@@ -2329,6 +2259,9 @@ function renderWeekStrip() {
 function renderHabitList(containerId, habits, d, countId, listKind = null) {
   const el = document.getElementById(containerId);
   el.innerHTML = '';
+  if (!habits.length) {
+    el.innerHTML = `<div class="dash-empty">No items yet. Add your first ${listKind === 'nonneg' ? 'non-negotiable' : 'item'} above.</div>`;
+  }
   habits.forEach(h => {
     const checked = isCheckDone(d, h.id);
     const item = document.createElement('div');
@@ -2375,6 +2308,9 @@ function renderHabitList(containerId, habits, d, countId, listKind = null) {
 function renderTrainingList(containerId, habits, d, mode) {
   const el = document.getElementById(containerId);
   el.innerHTML = '';
+  if (!habits.length) {
+    el.innerHTML = `<div class="dash-empty">No tasks yet. Add your first task above.</div>`;
+  }
   habits.forEach(h => {
     const taskKey = trackingIdForTask(h);
     const checked = isCheckDone(d, taskKey);
@@ -2700,15 +2636,19 @@ function renderWeeklyTrainingMix(data) {
 }
 
 function renderWeeklyHeatmap(data) {
-  const rows = [
-    ['AM skin', day => day.amSkin],
-    ['PM skin', day => day.pmSkin],
-    [labelForNumberField('focusScore'), day => day.focusDone],
-    ['Daylight', day => day.light],
-    ['Review', day => day.review],
-    ['Screen off', day => day.screen],
-  ];
-  document.getElementById('weeklyHeatmap').innerHTML = `<div class="weekly-heatmap">
+  const seen = new Map();
+  data.days.forEach(day => {
+    getNonNegs(day.ds, day.difficulty).forEach(item => {
+      if (!seen.has(item.id)) seen.set(item.id, item.text || item.id);
+    });
+  });
+  const rows = [...seen.entries()].slice(0, 8).map(([id, label]) => [label, day => isCheckDone(day.d, id)]);
+  const el = document.getElementById('weeklyHeatmap');
+  if (!rows.length) {
+    el.innerHTML = `<div class="dash-empty">No non-negotiables configured yet</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="weekly-heatmap">
     <div></div>${data.days.map(day => `<div class="heat-label" style="text-align:center">${DAY_NAMES[day.dow]}</div>`).join('')}
     ${rows.map(([label, fn]) => `
       <div class="heat-label">${label}</div>
