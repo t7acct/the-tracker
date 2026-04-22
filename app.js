@@ -333,6 +333,16 @@ function normalizeState() {
   if (!state.timerSettings.breakMs) state.timerSettings.breakMs = 5 * 60 * 1000;
   if (!state.numberLabels || typeof state.numberLabels !== 'object') state.numberLabels = {};
   if (!Array.isArray(state.customBenchmarks)) state.customBenchmarks = DEFAULT_BENCHMARKS.map(item => ({ ...item }));
+  if (!Array.isArray(state.reminders)) state.reminders = [];
+  state.reminders = state.reminders.map(r => ({
+    id: r.id || `rem_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    text: String(r.text || r.title || '').trim(),
+    date: r.date || todayStr(),
+    time: r.time || '',
+    notes: r.notes || '',
+    done: !!r.done,
+    createdAt: r.createdAt || new Date().toISOString()
+  })).filter(r => r.text && /^\d{4}-\d{2}-\d{2}$/.test(r.date));
   Object.keys(state).forEach(key => { if (/^tutor/i.test(key)) delete state[key]; });
   migrateTrainingIdentity();
   updateTargetsMap();
@@ -646,6 +656,133 @@ function escapeAttr(value) {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function reminderDateTime(reminder) {
+  if (!reminder?.date || !/^\d{4}-\d{2}-\d{2}$/.test(reminder.date)) return null;
+  const [h = 0, m = 0] = /^\d{2}:\d{2}$/.test(reminder.time || '') ? reminder.time.split(':').map(Number) : [0, 0];
+  const due = parseDateKey(reminder.date);
+  due.setHours(h, m, 0, 0);
+  return due;
+}
+
+function reminderDayDiff(reminder, baseDs = selectedDate) {
+  const due = parseDateKey(reminder.date);
+  const base = parseDateKey(baseDs);
+  due.setHours(0, 0, 0, 0);
+  base.setHours(0, 0, 0, 0);
+  return Math.round((due - base) / 86400000);
+}
+
+function formatReminderDistance(reminder, baseDs = selectedDate) {
+  const diff = reminderDayDiff(reminder, baseDs);
+  if (diff < 0) return `overdue by ${Math.abs(diff)} day${Math.abs(diff) === 1 ? '' : 's'}`;
+  if (diff === 0) return 'today';
+  if (diff === 1) return 'tomorrow';
+  return `in ${diff} days`;
+}
+
+function formatReminderWhen(reminder, baseDs = selectedDate) {
+  const dateLabel = formatDate(reminder.date, { weekday:'short', day:'numeric', month:'short' });
+  const timeLabel = reminder.time ? ` · ${reminder.time}` : '';
+  return `${formatReminderDistance(reminder, baseDs)} · ${dateLabel}${timeLabel}`;
+}
+
+function sortedReminders(includeDone = false) {
+  const rows = (state.reminders || []).filter(r => includeDone || !r.done);
+  return rows.sort((a, b) => {
+    const ad = reminderDateTime(a)?.getTime() || 0;
+    const bd = reminderDateTime(b)?.getTime() || 0;
+    if (ad !== bd) return ad - bd;
+    return String(a.text).localeCompare(String(b.text));
+  });
+}
+
+function getDashboardReminders(limit = 4) {
+  return sortedReminders(false).slice(0, limit);
+}
+
+function reminderRowHtml(reminder, options = {}) {
+  const dueClass = reminderDayDiff(reminder) < 0 ? ' overdue' : '';
+  const notes = reminder.notes ? `<div class="reminder-meta">${escapeAttr(reminder.notes)}</div>` : '';
+  const actions = options.actions === false ? '' : `
+    <button class="btn sm" onclick="toggleReminderDone('${escapeAttr(reminder.id)}')">${reminder.done ? 'Undo' : 'Done'}</button>
+    <button class="btn sm danger" onclick="deleteReminder('${escapeAttr(reminder.id)}')">Delete</button>
+  `;
+  return `
+    <div class="reminder-row ${reminder.done ? 'done' : ''}">
+      <input class="reminder-check" type="checkbox" ${reminder.done ? 'checked' : ''} onchange="toggleReminderDone('${escapeAttr(reminder.id)}')">
+      <div class="reminder-main">
+        <div class="reminder-title">${escapeAttr(reminder.text)}</div>
+        ${notes}
+      </div>
+      <div class="reminder-due${dueClass}">${escapeAttr(formatReminderWhen(reminder))}</div>
+      <div class="row" style="justify-content:flex-end">${actions}</div>
+    </div>
+  `;
+}
+
+function addReminder() {
+  const textEl = document.getElementById('reminderText');
+  const dateEl = document.getElementById('reminderDate');
+  const timeEl = document.getElementById('reminderTime');
+  const notesEl = document.getElementById('reminderNotes');
+  const text = (textEl?.value || '').trim();
+  const date = dateEl?.value || selectedDate;
+  if (!text) { showToast('Reminder text missing', 'danger'); return; }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { showToast('Reminder date missing', 'danger'); return; }
+  state.reminders.push({
+    id: `rem_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    text,
+    date,
+    time: timeEl?.value || '',
+    notes: (notesEl?.value || '').trim(),
+    done: false,
+    createdAt: new Date().toISOString()
+  });
+  if (textEl) textEl.value = '';
+  if (notesEl) notesEl.value = '';
+  if (timeEl) timeEl.value = '';
+  save();
+  renderReminders();
+  renderDashboard();
+  showToast('Reminder added', 'success');
+}
+
+function toggleReminderDone(id) {
+  const reminder = (state.reminders || []).find(r => String(r.id) === String(id));
+  if (!reminder) return;
+  reminder.done = !reminder.done;
+  save();
+  renderReminders();
+  renderDashboard();
+}
+
+function deleteReminder(id) {
+  state.reminders = (state.reminders || []).filter(r => String(r.id) !== String(id));
+  save();
+  renderReminders();
+  renderDashboard();
+  showToast('Reminder deleted', 'danger');
+}
+
+function renderReminders() {
+  const dateEl = document.getElementById('reminderDate');
+  if (dateEl && !dateEl.value) dateEl.value = selectedDate;
+  const list = document.getElementById('reminderList');
+  const count = document.getElementById('reminderCount');
+  if (!list) return;
+  const active = sortedReminders(false);
+  const done = sortedReminders(true).filter(r => r.done).slice(-8).reverse();
+  if (count) count.textContent = `${active.length}`;
+  if (!active.length && !done.length) {
+    list.innerHTML = `<div class="dash-empty">No reminders yet</div>`;
+    return;
+  }
+  list.innerHTML = [
+    ...active.map(r => reminderRowHtml(r)),
+    ...done.map(r => reminderRowHtml(r))
+  ].join('');
 }
 
 function jsArg(value) {
@@ -1067,6 +1204,10 @@ function renderDashboard() {
     shortTitle: point.sleep ? `${point.sleep}h` : '—',
     color: point.sleep >= 7.5 ? 'var(--green)' : point.sleep >= 6 ? 'var(--amber)' : point.sleep > 0 ? 'var(--red)' : 'var(--border2)'
   }));
+  const reminders = getDashboardReminders();
+  const reminderHtml = reminders.length
+    ? reminders.map(r => reminderRowHtml(r, { actions:false })).join('')
+    : `<div class="dash-empty">No upcoming reminders</div>`;
   document.getElementById('dashboardSummary').innerHTML = `
     <div class="dash-panel primary">
       <div class="dash-label">Time today</div>
@@ -1091,6 +1232,10 @@ function renderDashboard() {
       <div class="dash-next-meta">${escapeAttr(nextMeta)}</div>
       ${nextTask ? `<button class="btn sm primary" style="margin-top:4px;width:100%" onclick="toggle('${escapeAttr(selectedDate)}','${escapeAttr(nextTaskId)}')">Mark done</button>` : ''}
       <div class="dash-subline" style="margin-top:6px">Week logged: <strong>${formatHours(weekHours)}</strong></div>
+    </div>
+    <div class="dash-panel dash-reminders">
+      <div class="dash-chart-title"><span>Upcoming</span><strong>${reminders.length ? `${reminders.length} reminder${reminders.length === 1 ? '' : 's'}` : 'Clear'}</strong></div>
+      <div class="reminder-list">${reminderHtml}</div>
     </div>
     <div class="dash-chart-grid">
       <div class="dash-panel">
@@ -2985,7 +3130,8 @@ function resetAll() {
     customTraining:{}, removedTraining:{}, trainingTemplates:{}, exerciseOverrides:{},
     timerSettings:{ pomodoroMs:25 * 60 * 1000, breakMs:5 * 60 * 1000 },
     numberLabels:{},
-    customBenchmarks: DEFAULT_BENCHMARKS.map(item => ({ ...item }))
+    customBenchmarks: DEFAULT_BENCHMARKS.map(item => ({ ...item })),
+    reminders:[]
   };
   normalizeState();
   selectedDate = todayStr();
@@ -2999,12 +3145,13 @@ function resetAll() {
 
 function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
-    const tabs = ['daily','timer','weekly','metrics','errorlog','export'];
+    const tabs = ['daily','timer','reminders','weekly','metrics','errorlog','export'];
     b.classList.toggle('active', tabs[i] === name);
   });
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-'+name));
 
   if (name === 'timer')    renderTimer();
+  if (name === 'reminders') renderReminders();
   if (name === 'weekly')   renderWeeklyLog();
   if (name === 'metrics')  renderMetrics();
   if (name === 'errorlog') renderErrorLog();
@@ -3020,6 +3167,7 @@ function switchTab(name) {
 
 function renderAll() {
   renderDaily();
+  renderReminders();
 }
 
 loadMotivationQuotes().then(() => renderPhase());
