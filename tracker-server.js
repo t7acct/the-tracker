@@ -117,8 +117,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/motivation_quotes.json') {
-      const qPath = path.join(root, 'motivation_quotes.json');
-      sendFile(res, qPath);
+      // Keep the URL compatible with older clients without a quote data file.
+      send(res, 200, JSON.stringify({ quotes: [] }), 'application/json; charset=utf-8');
       return;
     }
 

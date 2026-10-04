@@ -1538,7 +1538,6 @@ function toggle(ds, id) {
 function setPhase(p) {
   state.phase = p;
   save();
-  renderPhase();
 }
 
 function timerElapsedTotal() {
@@ -2012,7 +2011,6 @@ function renderDaily() {
   const disp = formatDate(selectedDate, {day:'numeric',month:'long',year:'numeric'});
   document.getElementById('dayMeta').textContent = (isToday ? 'Today · ' : '') + disp + ' · ' + (DAY_FOCUS[dow] || '') + ` · ${difficulty === 'rest' ? 'rest day' : '6h workday'}`;
 
-  renderPhase();
   renderWeekStrip();
 
   // Sunday panel
@@ -2102,32 +2100,6 @@ function renderStats() {
   const paceEl = document.getElementById('statWeekPace');
   paceEl.textContent = avgHours ? formatHours(avgHours).replace(/^00:/, '') : '—';
   paceEl.style.color = avgHours >= 5 ? 'var(--green)' : avgHours >= 3 ? 'var(--amber)' : avgHours > 0 ? 'var(--red)' : 'var(--dim)';
-}
-
-let motivationQuotes = null;
-
-async function loadMotivationQuotes() {
-  try {
-    const res = await fetch('motivation_quotes.json');
-    const data = await res.json();
-    motivationQuotes = Array.isArray(data.quotes) ? data.quotes : [];
-  } catch (e) {
-    motivationQuotes = [];
-  }
-}
-
-function renderPhase() {
-  const quotes = Array.isArray(motivationQuotes) ? motivationQuotes : [];
-  if (!quotes.length) {
-    document.getElementById('phaseDesc').textContent = '';
-    return;
-  }
-  const EPOCH = new Date('2026-01-01').getTime();
-  const dayIndex = Math.floor((new Date(selectedDate).getTime() - EPOCH) / 86400000);
-  const q = quotes[((dayIndex % quotes.length) + quotes.length) % quotes.length];
-  document.getElementById('phaseDesc').innerHTML = q.author && q.author !== 'Unknown'
-    ? `"${escapeAttr(q.quote)}" <span style="color:var(--muted);font-size:.68rem">— ${escapeAttr(q.author)}</span>`
-    : `"${escapeAttr(q.quote)}"`;
 }
 
 function renderWeekStrip() {
@@ -3042,7 +3014,6 @@ function renderAll() {
   renderReminders();
 }
 
-loadMotivationQuotes().then(() => renderPhase());
 renderAll();
 initServerAutosave().then(active => {
   if (!active) initBackupFile();
